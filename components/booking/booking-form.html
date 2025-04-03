@@ -1,0 +1,239 @@
+<!-- X Stop Booking Form Component -->
+<div class="booking-form">
+  <h2 class="booking-form-title">Book Your Activity</h2>
+  <form id="activity-booking-form">
+    <!-- Branch Selection -->
+    <div class="form-group">
+      <label for="branch" class="form-label">Select Branch</label>
+      <select id="branch" name="branch" class="form-select" required>
+        <option value="" disabled selected>Choose a branch</option>
+        <option value="rak-entertainment">X Entertainment RAK Mall</option>
+        <option value="rifaa-entertainment">X Entertainment Rifaa</option>
+        <option value="rak-cafe">X Cafe RAK Mall</option>
+        <option value="super-bowling-cafe">X Cafe at Super Bowling</option>
+        <option value="hunted-cafe">Hunted X Cafe</option>
+      </select>
+    </div>
+    
+    <!-- Activity Selection -->
+    <div class="form-group">
+      <label for="activity" class="form-label">Select Activity</label>
+      <select id="activity" name="activity" class="form-select" required>
+        <option value="" disabled selected>Choose an activity</option>
+        <!-- Dynamic options will be populated based on branch selection -->
+      </select>
+    </div>
+    
+    <!-- Date Selection -->
+    <div class="form-group">
+      <label for="booking-date" class="form-label">Select Date</label>
+      <input type="date" id="booking-date" name="booking-date" class="form-input" required>
+    </div>
+    
+    <!-- Time Selection -->
+    <div class="form-group">
+      <label for="booking-time" class="form-label">Select Time</label>
+      <select id="booking-time" name="booking-time" class="form-select" required>
+        <option value="" disabled selected>Choose a time slot</option>
+        <!-- Dynamic options will be populated based on date and activity selection -->
+      </select>
+    </div>
+    
+    <!-- Number of People -->
+    <div class="form-group">
+      <label for="people-count" class="form-label">Number of People</label>
+      <input type="number" id="people-count" name="people-count" min="1" max="20" class="form-input" required>
+    </div>
+    
+    <!-- Contact Information -->
+    <div class="form-group">
+      <label for="customer-name" class="form-label">Your Name</label>
+      <input type="text" id="customer-name" name="customer-name" class="form-input" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="customer-email" class="form-label">Email Address</label>
+      <input type="email" id="customer-email" name="customer-email" class="form-input" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="customer-phone" class="form-label">Phone Number</label>
+      <input type="tel" id="customer-phone" name="customer-phone" class="form-input" required>
+    </div>
+    
+    <!-- Special Requests -->
+    <div class="form-group">
+      <label for="special-requests" class="form-label">Special Requests (Optional)</label>
+      <textarea id="special-requests" name="special-requests" class="form-input" rows="3"></textarea>
+    </div>
+    
+    <!-- Booking Summary -->
+    <div class="booking-summary">
+      <h3 class="summary-title">Booking Summary</h3>
+      <div class="summary-details">
+        <div class="summary-item">
+          <span class="summary-label">Branch:</span>
+          <span id="summary-branch" class="summary-value">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Activity:</span>
+          <span id="summary-activity" class="summary-value">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Date:</span>
+          <span id="summary-date" class="summary-value">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Time:</span>
+          <span id="summary-time" class="summary-value">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">People:</span>
+          <span id="summary-people" class="summary-value">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Price:</span>
+          <span id="summary-price" class="summary-value">-</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Terms and Conditions -->
+    <div class="form-group">
+      <div class="checkbox-group">
+        <input type="checkbox" id="terms-agreement" name="terms-agreement" required>
+        <label for="terms-agreement">I agree to the <a href="/terms.html" target="_blank">Terms and Conditions</a></label>
+      </div>
+    </div>
+    
+    <!-- Submit Button -->
+    <button type="submit" class="form-submit btn-book">Proceed to Payment</button>
+  </form>
+</div>
+
+<!-- Activity Data for Dynamic Population -->
+<script>
+  const activityData = {
+    'rak-entertainment': [
+      { id: 'laser-tag', name: 'Laser Tag', price: 80, unit: 'per hour' },
+      { id: 'horror-escape', name: 'Horror Escape Room', price: 80, unit: 'per session' },
+      { id: 'kids-area', name: 'Kids Area + Face Drawing', price: 30, unit: 'per child' },
+      { id: 'smash-room', name: 'Smash Room', price: 50, unit: 'per session' },
+      { id: 'billiard', name: 'Billiard', price: 40, unit: 'per hour' },
+      { id: 'playstation', name: 'PlayStation', price: 30, unit: 'per hour' },
+      { id: 'pcs', name: 'PCs', price: 25, unit: 'per hour' }
+    ],
+    'rifaa-entertainment': [
+      { id: 'billiard-rifaa', name: 'Billiard', price: 40, unit: 'per hour' },
+      { id: 'playstation-rifaa', name: 'PlayStation', price: 30, unit: 'per hour' },
+      { id: 'pcs-rifaa', name: 'PCs', price: 25, unit: 'per hour' }
+    ],
+    'rak-cafe': [
+      { id: 'cafe-visit', name: 'Cafe Visit', price: 0, unit: 'reservation only' }
+    ],
+    'super-bowling-cafe': [
+      { id: 'cafe-bowling-visit', name: 'Cafe Visit', price: 0, unit: 'reservation only' }
+    ],
+    'hunted-cafe': [
+      { id: 'hunted-cafe-visit', name: 'Cafe Visit', price: 0, unit: 'reservation only' }
+    ]
+  };
+  
+  // Time slots available for booking
+  const timeSlots = [
+    '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', 
+    '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', 
+    '8:00 PM', '9:00 PM'
+  ];
+  
+  // Populate activity dropdown based on branch selection
+  document.getElementById('branch').addEventListener('change', function() {
+    const branchValue = this.value;
+    const activitySelect = document.getElementById('activity');
+    
+    // Clear existing options
+    activitySelect.innerHTML = '<option value="" disabled selected>Choose an activity</option>';
+    
+    // Add new options based on selected branch
+    if (branchValue && activityData[branchValue]) {
+      activityData[branchValue].forEach(activity => {
+        const option = document.createElement('option');
+        option.value = activity.id;
+        option.textContent = `${activity.name} - ${activity.price} DHS ${activity.unit}`;
+        activitySelect.appendChild(option);
+      });
+    }
+    
+    // Update summary
+    document.getElementById('summary-branch').textContent = this.options[this.selectedIndex].text;
+    document.getElementById('summary-activity').textContent = '-';
+    updateTotalPrice();
+  });
+  
+  // Populate time slots
+  document.getElementById('booking-date').addEventListener('change', function() {
+    const timeSelect = document.getElementById('booking-time');
+    
+    // Clear existing options
+    timeSelect.innerHTML = '<option value="" disabled selected>Choose a time slot</option>';
+    
+    // Add time slots
+    timeSlots.forEach(slot => {
+      const option = document.createElement('option');
+      option.value = slot;
+      option.textContent = slot;
+      timeSelect.appendChild(option);
+    });
+    
+    // Update summary
+    document.getElementById('summary-date').textContent = this.value;
+    document.getElementById('summary-time').textContent = '-';
+  });
+  
+  // Update activity in summary
+  document.getElementById('activity').addEventListener('change', function() {
+    document.getElementById('summary-activity').textContent = this.options[this.selectedIndex].text;
+    updateTotalPrice();
+  });
+  
+  // Update time in summary
+  document.getElementById('booking-time').addEventListener('change', function() {
+    document.getElementById('summary-time').textContent = this.value;
+  });
+  
+  // Update people count in summary
+  document.getElementById('people-count').addEventListener('change', function() {
+    document.getElementById('summary-people').textContent = this.value;
+    updateTotalPrice();
+  });
+  
+  // Calculate and update total price
+  function updateTotalPrice() {
+    const branchValue = document.getElementById('branch').value;
+    const activityId = document.getElementById('activity').value;
+    const peopleCount = parseInt(document.getElementById('people-count').value) || 0;
+    
+    let price = 0;
+    
+    if (branchValue && activityId && activityData[branchValue]) {
+      const activity = activityData[branchValue].find(a => a.id === activityId);
+      if (activity) {
+        price = activity.price * peopleCount;
+      }
+    }
+    
+    document.getElementById('summary-price').textContent = price > 0 ? `${price} DHS` : '-';
+  }
+  
+  // Form submission
+  document.getElementById('activity-booking-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Here you would typically send the form data to a server
+    // For now, we'll just show an alert
+    alert('Booking submitted! Redirecting to payment...');
+    
+    // In a real implementation, you would redirect to a payment page or process payment
+    // window.location.href = '/payment.html';
+  });
+</script>

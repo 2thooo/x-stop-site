@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X Entertainment Rifaa Branch | X Stop</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/enhanced-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header will be loaded dynamically -->
+    <div id="header-container"></div>
+
+    <main class="branch-page">
+        <div class="container">
+            <div class="branch-hero">
+                <h1>X Entertainment Rifaa Branch</h1>
+                <div class="branch-details">
+                    <div class="branch-info">
+                        <p class="branch-timing"><i class="fas fa-clock"></i> Daily 4 PM – 2 AM</p>
+                        <p class="branch-phone"><i class="fas fa-phone"></i> +971 55 749 0383</p>
+                        <div class="social-media-links">
+                            <a href="https://www.instagram.com/xstop/" target="_blank" class="social-media-link" data-platform="instagram">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Maps integration -->
+            <div class="branch-map-container">
+                <div id="branch-map" data-branch-id="rifaa"></div>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=25.6532,55.7527" 
+                   target="_blank" class="directions-button">
+                    <i class="fas fa-directions"></i> Get Directions
+                </a>
+            </div>
+
+            <div class="branch-content">
+                <div class="branch-description">
+                    <h2>About X Entertainment Rifaa Branch</h2>
+                    <p>Our Rifaa Branch offers a more focused gaming experience with billiards, PlayStation consoles, and PC gaming stations. This location is perfect for gaming enthusiasts looking for a comfortable and exciting environment to enjoy their favorite games.</p>
+                    <p>With later opening hours starting at 4 PM, this branch is ideal for evening entertainment and late-night gaming sessions.</p>
+                </div>
+
+                <!-- Activities available at this branch -->
+                <div class="branch-activities">
+                    <h2>Available Activities</h2>
+                    <div class="activities-grid">
+                        <div class="activity-card">
+                            <div class="activity-image">
+                                <img src="../../assets/images/billiard.jpg" alt="Billiard">
+                            </div>
+                            <div class="activity-content">
+                                <h3>Billiard</h3>
+                                <p class="activity-price">AED 40 per hour</p>
+                                <p>Enjoy a game of billiards on our professional tables.</p>
+                                <a href="../../booking.html?branch=rifaa&activity=billiard" class="activity-button">Book Now</a>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-card">
+                            <div class="activity-image">
+                                <img src="../../assets/images/playstation.jpg" alt="PlayStation">
+                            </div>
+                            <div class="activity-content">
+                                <h3>PlayStation</h3>
+                                <p class="activity-price">AED 30 per hour</p>
+                                <p>Play the latest games on our PlayStation consoles.</p>
+                                <a href="../../booking.html?branch=rifaa&activity=playstation" class="activity-button">Book Now</a>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-card">
+                            <div class="activity-image">
+                                <img src="../../assets/images/pc-gaming.jpg" alt="PC Gaming">
+                            </div>
+                            <div class="activity-content">
+                                <h3>PC Gaming</h3>
+                                <p class="activity-price">AED 25 per hour</p>
+                                <p>Experience high-performance gaming on our gaming PCs.</p>
+                                <a href="../../booking.html?branch=rifaa&activity=pc-gaming" class="activity-button">Book Now</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special offers or events -->
+                <div class="branch-special-offers">
+                    <h2>Special Offers</h2>
+                    <div class="offers-grid">
+                        <div class="offer-card">
+                            <div class="offer-badge">New</div>
+                            <h3>Late Night Gaming</h3>
+                            <p>25% off all gaming activities after 10 PM</p>
+                            <p class="offer-dates">Valid all week</p>
+                            <a href="../../booking.html?branch=rifaa" class="offer-button">Book Now</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking CTA -->
+                <div class="booking-cta">
+                    <h2>Ready to Visit?</h2>
+                    <p>Book your experience at X Entertainment Rifaa Branch now!</p>
+                    <a href="../../booking.html?branch=rifaa" class="cta-button">Book Now</a>
+                    
+                    <!-- Special booking information -->
+                    <div class="special-booking-info">
+                        <h3>For Group Bookings & Special Events:</h3>
+                        <p><i class="fas fa-phone"></i> +971 55 749 0383 (Contact the Owner)</p>
+                        <p><i class="fas fa-envelope"></i> info.xholdings@gmail.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer will be loaded dynamically -->
+    <div id="footer-container"></div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/navigation.js"></script>
+    <script src="../../assets/js/maps/branch-maps.js"></script>
+    <script src="../../assets/js/social-media.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initBranchMap" async defer></script>
+</body>
+</html>

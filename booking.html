@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Your Activity - X Stop</title>
+  <meta name="description" content="Book your favorite activities at X Stop in Ras Al Khaimah. Reserve laser tag, horror escape rooms, kids area, and more!">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/images/9a1da8f0-a67e-4eb7-bf71-1242ee347333.jpeg" type="image/jpeg">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <link rel="stylesheet" href="/assets/css/enhanced-styles.css">
+  
+  <style>
+    .booking-page {
+      padding-top: 120px;
+      padding-bottom: 80px;
+    }
+    
+    .booking-page-title {
+      text-align: center;
+      margin-bottom: 40px;
+      color: var(--x-yellow);
+    }
+    
+    .booking-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .booking-info {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 40px;
+    }
+    
+    .booking-info h3 {
+      color: var(--x-yellow);
+      margin-bottom: 20px;
+    }
+    
+    .booking-info p {
+      margin-bottom: 15px;
+    }
+    
+    .booking-info ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    
+    .booking-info li {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .booking-info li:last-child {
+      border-bottom: none;
+    }
+    
+    .booking-info .activity-name {
+      font-weight: 600;
+      color: var(--x-white);
+    }
+    
+    .booking-info .activity-price {
+      color: var(--x-yellow);
+      float: right;
+    }
+    
+    .branch-info, .activity-info {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .branch-info h4, .activity-info h4 {
+      color: var(--x-yellow);
+      margin-bottom: 10px;
+    }
+    
+    .branch-hours {
+      margin-top: 15px;
+    }
+    
+    .branch-hours h5 {
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    .activity-price {
+      color: var(--x-yellow);
+      font-weight: 600;
+      margin-top: 10px;
+    }
+    
+    .booking-form .form-input.error, 
+    .booking-form .form-select.error {
+      border-color: #ff3860;
+    }
+    
+    .booking-confirmation {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .confirmation-header {
+      margin-bottom: 30px;
+    }
+    
+    .confirmation-header i {
+      font-size: 4rem;
+      color: var(--x-yellow);
+      margin-bottom: 20px;
+    }
+    
+    .confirmation-details {
+      margin-bottom: 30px;
+      text-align: left;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .confirmation-details ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    
+    .confirmation-details li {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .confirmation-actions {
+      margin-top: 30px;
+    }
+    
+    .confirmation-actions button {
+      margin: 10px;
+    }
+    
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--x-white);
+      border: 2px solid var(--x-purple);
+    }
+    
+    .btn-secondary:hover {
+      background-color: var(--x-purple);
+      color: var(--x-white);
+    }
+    
+    .special-booking-info {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 30px;
+      border-left: 4px solid var(--x-yellow);
+    }
+    
+    .special-booking-info h3 {
+      color: var(--x-yellow);
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+    }
+    
+    .special-booking-info p {
+      margin-bottom: 5px;
+    }
+    
+    .special-booking-info i {
+      margin-right: 8px;
+      color: var(--x-yellow);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div id="header-container"></div>
+  
+  <!-- Booking Page Content -->
+  <section class="booking-page">
+    <div class="container">
+      <h1 class="booking-page-title fade-in">Book Your X Stop Experience</h1>
+      
+      <div class="booking-container">
+        <div class="booking-info slide-in-left">
+          <h3>Activity Pricing</h3>
+          <ul>
+            <li>
+              <span class="activity-name">Laser Tag</span>
+              <span class="activity-price">80 DHS per hour</span>
+            </li>
+            <li>
+              <span class="activity-name">Horror Escape Room</span>
+              <span class="activity-price">80 DHS per session</span>
+            </li>
+            <li>
+              <span class="activity-name">Kids Area</span>
+              <span class="activity-price">30 DHS per hour</span>
+            </li>
+            <li>
+              <span class="activity-name">Face Painting</span>
+              <span class="activity-price">10 DHS per person</span>
+            </li>
+            <li>
+              <span class="activity-name">Smash Room - Small Package</span>
+              <span class="activity-price">50 DHS</span>
+            </li>
+            <li>
+              <span class="activity-name">Smash Room - Medium Package</span>
+              <span class="activity-price">80 DHS</span>
+            </li>
+            <li>
+              <span class="activity-name">Smash Room - Large Package</span>
+              <span class="activity-price">120 DHS</span>
+            </li>
+            <li>
+              <span class="activity-name">Billiard</span>
+              <span class="activity-price">40 DHS per hour</span>
+            </li>
+            <li>
+              <span class="activity-name">PlayStation</span>
+              <span class="activity-price">30 DHS per hour</span>
+            </li>
+            <li>
+              <span class="activity-name">PC Gaming</span>
+              <span class="activity-price">25 DHS per hour</span>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="slide-in-right">
+          <!-- Booking Form -->
+          <div class="booking-form">
+            <h2 class="booking-form-title">Book Your Activity</h2>
+            <form id="activity-booking-form">
+              <!-- Branch Selection -->
+              <div class="form-group">
+                <label for="branch" class="form-label">Select Branch</label>
+                <select id="branch" name="branch" class="form-select" required>
+                  <option value="" disabled selected>Choose a branch</option>
+                </select>
+              </div>
+              
+              <!-- Branch Details -->
+              <div id="branch-details" style="display: none;"></div>
+              
+              <!-- Activity Selection -->
+              <div class="form-group">
+                <label for="activity" class="form-label">Select Activity</label>
+                <select id="activity" name="activity" class="form-select" required>
+                  <option value="" disabled selected>Choose an activity</option>
+                </select>
+              </div>
+              
+              <!-- Activity Details -->
+              <div id="activity-details" style="display: none;"></div>
+              
+              <!-- Date Selection -->
+              <div class="form-group">
+                <label for="booking-date" class="form-label">Select Date</label>
+                <input type="date" id="booking-date" name="booking-date" class="form-input" required>
+              </div>
+              
+              <!-- Time Selection -->
+              <div class="form-group">
+                <label for="booking-time" class="form-label">Select Time</label>
+                <select id="booking-time" name="booking-time" class="form-select" required>
+                  <option value="" disabled selected>Choose a time slot</option>
+                </select>
+              </div>
+              
+              <!-- Number of People -->
+              <div class="form-group">
+                <label for="people-count" class="form-label">Number of People</label>
+                <input type="number" id="people-count" name="people-count" min="1" max="20" value="1" class="form-input" required>
+              </div>
+              
+              <!-- Contact Information -->
+              <div class="form-group">
+                <label for="customer-name" class="form-label">Your Name</label>
+                <input type="text" id="customer-name" name="customer-name" class="form-input" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="customer-email" class="form-label">Email Address</label>
+                <input type="email" id="customer-email" name="customer-email" class="form-input" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="customer-phone" class="form-label">Phone Number</label>
+                <input type="tel" id="customer-phone" name="customer-phone" class="form-input" required>
+              </div>
+              
+              <!-- Special Requests -->
+              <div class="form-group">
+                <label for="special-requests" class="form-label">Special Requests (Optional)</label>
+                <textarea id="special-requests" name="special-requests" class="form-input" rows="3"></textarea>
+              </div>
+              
+              <!-- Booking Summary -->
+              <div class="booking-summary">
+                <h3 class="summary-title">Booking Summary</h3>
+                <div class="summary-details">
+                  <div class="summary-item">
+                    <span class="summary-label">Branch:</span>
+                    <span id="summary-branch" class="summary-value">-</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Activity:</span>
+                    <span id="summary-activity" class="summary-value">-</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Date:</span>
+                    <span id="summary-date" class="summary-value">-</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Time:</span>
+                    <span id="summary-time" class="summary-value">-</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">People:</span>
+                    <span id="summary-people" class="summary-value">-</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">Price:</span>
+                    <span id="summary-price" class="summary-value">-</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Terms and Conditions -->
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <input type="checkbox" id="terms-checkbox" name="terms-checkbox" required>
+                  <label for="terms-checkbox">I agree to the <a href="#" class="text-link">Terms and Conditions</a></label>
+                </div>
+              </div>
+              
+              <!-- Submit Button -->
+              <button type="submit" class="btn-primary btn-block">Proceed to Payment</button>
+            </form>
+            
+            <!-- Special Booking Information -->
+            <div class="special-booking-info">
+              <h3>For Birthday Parties & Special Events:</h3>
+              <p><i class="fas fa-phone"></i> +971 55 749 0383 (Contact the Owner)</p>
+              <p><i class="fas fa-envelope"></i> info.xholdings@gmail.com</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div id="footer-container"></div>
+
+  <!-- Scripts -->
+  <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/booking-enhanced.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Form submission handler
+      const bookingForm = document.getElementById('activity-booking-form');
+      
+      if (bookingForm) {
+        bookingForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Get form data
+          const formData = new FormData(bookingForm);
+          const bookingData = {};
+          
+          for (const [key, value] of formData.entries()) {
+            bookingData[key] = value;
+          }
+          
+          // Store booking data in session storage for payment page
+          sessionStorage.setItem('bookingData', JSON.stringify(bookingData));
+          
+          // Redirect to payment page
+          window.location.href = '/payment.html';
+        });
+      }
+    });
+  </script>
+</body>
+</html>

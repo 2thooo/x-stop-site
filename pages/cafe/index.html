@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>X Cafe - X Stop</title>
+  <meta name="description" content="Enjoy delicious drinks and sweets at X Cafe in RAK Mall, Super Bowling, and our unique Hunted X Cafe location.">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/images/9a1da8f0-a67e-4eb7-bf71-1242ee347333.jpeg" type="image/jpeg">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/assets/css/main.css">
+  
+  <style>
+    .branch-page {
+      padding-top: 120px;
+      padding-bottom: 80px;
+    }
+    
+    .branch-hero {
+      background-color: rgba(255, 215, 0, 0.2);
+      padding: 60px 0;
+      margin-bottom: 60px;
+      border-radius: 10px;
+    }
+    
+    .branch-logo {
+      width: 200px;
+      height: auto;
+      margin-bottom: 30px;
+    }
+    
+    .branch-page-title {
+      color: var(--x-yellow);
+      margin-bottom: 20px;
+    }
+    
+    .menu-section {
+      margin-bottom: 60px;
+    }
+    
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 30px;
+    }
+    
+    .menu-item {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    
+    .menu-item:hover {
+      transform: translateY(-5px);
+    }
+    
+    .menu-image {
+      height: 180px;
+      background-color: var(--x-yellow);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .menu-content {
+      padding: 20px;
+    }
+    
+    .menu-title {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      color: var(--x-white);
+    }
+    
+    .menu-price {
+      color: var(--x-yellow);
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    
+    .menu-description {
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+    }
+    
+    .branch-locations {
+      display: flex;
+      gap: 30px;
+      margin-top: 40px;
+      flex-wrap: wrap;
+    }
+    
+    .location-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 30px;
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .location-title {
+      color: var(--x-yellow);
+      margin-bottom: 15px;
+    }
+    
+    .location-address {
+      margin-bottom: 20px;
+    }
+    
+    .location-hours {
+      margin-bottom: 20px;
+    }
+    
+    .hours-title {
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    .hours-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    
+    .hours-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div id="header-container"></div>
+  
+  <!-- Branch Page Content -->
+  <section class="branch-page">
+    <div class="container">
+      <div class="branch-hero text-center fade-in">
+        <img src="/assets/images/f72f9479-aacc-4edb-ab25-0f3db0739e27.jpeg" alt="X Cafe Logo" class="branch-logo">
+        <h1 class="branch-page-title">X Cafe</h1>
+        <p class="branch-subtitle">Delicious drinks and sweets in a relaxing atmosphere</p>
+      </div>
+      
+      <div class="menu-section">
+        <h2 class="section-title slide-up">Our Menu</h2>
+        
+        <h3 class="mb-4 slide-in-left">Hot Drinks</h3>
+        <div class="menu-grid">
+          <div class="menu-item slide-in-left">
+            <div class="menu-image">
+              <i class="fas fa-mug-hot" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Espresso</h4>
+              <p class="menu-price">15 DHS</p>
+              <p class="menu-description">Rich and aromatic single shot espresso.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-up">
+            <div class="menu-image">
+              <i class="fas fa-coffee" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Cappuccino</h4>
+              <p class="menu-price">22 DHS</p>
+              <p class="menu-description">Espresso with steamed milk and a silky layer of foam.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-up">
+            <div class="menu-image">
+              <i class="fas fa-mug-hot" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Latte</h4>
+              <p class="menu-price">24 DHS</p>
+              <p class="menu-description">Espresso with a generous amount of steamed milk and light foam.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-in-right">
+            <div class="menu-image">
+              <i class="fas fa-mug-saucer" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Arabic Coffee</h4>
+              <p class="menu-price">18 DHS</p>
+              <p class="menu-description">Traditional Arabic coffee with cardamom.</p>
+            </div>
+          </div>
+        </div>
+        
+        <h3 class="mb-4 mt-5 slide-in-left">Cold Drinks</h3>
+        <div class="menu-grid">
+          <div class="menu-item slide-in-left">
+            <div class="menu-image">
+              <i class="fas fa-glass-water" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Iced Latte</h4>
+              <p class="menu-price">26 DHS</p>
+              <p class="menu-description">Chilled espresso with cold milk and ice.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-up">
+            <div class="menu-image">
+              <i class="fas fa-martini-glass" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Fruit Smoothie</h4>
+              <p class="menu-price">28 DHS</p>
+              <p class="menu-description">Blend of fresh seasonal fruits with ice.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-up">
+            <div class="menu-image">
+              <i class="fas fa-glass-water" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Fresh Juice</h4>
+              <p class="menu-price">25 DHS</p>
+              <p class="menu-description">Freshly squeezed juice of your choice.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-in-right">
+            <div class="menu-image">
+              <i class="fas fa-martini-glass-citrus" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Iced Tea</h4>
+              <p class="menu-price">20 DHS</p>
+              <p class="menu-description">Refreshing iced tea with a hint of lemon.</p>
+            </div>
+          </div>
+        </div>
+        
+        <h3 class="mb-4 mt-5 slide-in-left">Desserts</h3>
+        <div class="menu-grid">
+          <div class="menu-item slide-in-left">
+            <div class="menu-image">
+              <i class="fas fa-cake-candles" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Chocolate Cake</h4>
+              <p class="menu-price">30 DHS</p>
+              <p class="menu-description">Rich chocolate cake with a molten center.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-up">
+            <div class="menu-image">
+              <i class="fas fa-cookie" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Cookies</h4>
+              <p class="menu-price">15 DHS</p>
+              <p class="menu-description">Freshly baked cookies, choice of chocolate chip or oatmeal.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-up">
+            <div class="menu-image">
+              <i class="fas fa-ice-cream" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Ice Cream</h4>
+              <p class="menu-price">22 DHS</p>
+              <p class="menu-description">Premium ice cream in various flavors.</p>
+            </div>
+          </div>
+          
+          <div class="menu-item slide-in-right">
+            <div class="menu-image">
+              <i class="fas fa-candy-cane" style="font-size: 4rem; color: var(--x-black);"></i>
+            </div>
+            <div class="menu-content">
+              <h4 class="menu-title">Arabic Sweets</h4>
+              <p class="menu-price">28 DHS</p>
+              <p class="menu-description">Assortment of traditional Arabic sweets.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="branch-locations mt-5">
+        <div class="location-card slide-in-left">
+          <h3 class="location-title">X Cafe RAK Mall</h3>
+          <p class="location-address">
+            <i class="fas fa-map-marker-alt"></i> RAK Mall, Ras Al Khaimah, UAE
+          </p>
+          <div class="location-hours">
+            <h4 class="hours-title">Opening Hours</h4>
+            <ul class="hours-list">
+              <li><span>Monday - Thursday</span> <span>9:00 AM - 10:00 PM</span></li>
+              <li><span>Friday - Saturday</span> <span>9:00 AM - 11:00 PM</span></li>
+              <li><span>Sunday</span> <span>9:00 AM - 10:00 PM</span></li>
+            </ul>
+          </div>
+          <p>Full menu available at this location.</p>
+          <a href="/booking.html" class="btn btn-book mt-3">Reserve a Table</a>
+        </div>
+        
+        <div class="location-card slide-up">
+          <h3 class="location-title">X Cafe at Super Bowling</h3>
+          <p class="location-address">
+            <i class="fas fa-map-marker-alt"></i> Super Bowling Center, Ras Al Khaimah, UAE
+          </p>
+          <div class="location-hours">
+            <h4 class="hours-title">Opening Hours</h4>
+            <ul class="hours-list">
+              <li><span>Monday - Thursday</span> <span>10:00 AM - 10:00 PM</span></li>
+              <li><span>Friday - Saturday</span> <span>10:00 AM - 12:00 AM</span></li>
+              <li><span>Sunday</span> <span>10:00 AM - 10:00 PM</span></li>
+            </ul>
+          </div>
+          <p>Limited menu with focus on drinks and quick snacks.</p>
+          <a href="/booking.html" class="btn btn-book mt-3">Reserve a Table</a>
+        </div>
+        
+        <div class="location-card slide-in-right">
+          <h3 class="location-title">Hunted X Cafe</h3>
+          <p class="location-address">
+            <i class="fas fa-map-marker-alt"></i> Downtown, Ras Al Khaimah, UAE
+          </p>
+          <div class="location-hours">
+            <h4 class="hours-title">Opening Hours</h4>
+            <ul class="hours-list">
+              <li><span>Monday - Thursday</span> <span>5:00 PM - 12:00 AM</span></li>
+              <li><span>Friday - Saturday</span> <span>5:00 PM - 2:00 AM</span></li>
+              <li><span>Sunday</span> <span>5:00 PM - 12:00 AM</span></li>
+            </ul>
+          </div>
+          <p>Unique themed cafe with spooky atmosphere and special menu items.</p>
+          <a href="/booking.html" class="btn btn-book mt-3">Reserve a Table</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Footer -->
+  <div id="footer-container"></div>
+  
+  <!-- JavaScript -->
+  <script>
+    // Load header component
+    fetch('/components/header/header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-container').innerHTML = data;
+        
+        // Add event listeners for mobile menu after header is loaded
+        const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+        const mobileMenuOverlay = document.querySelector('.mobile-menu-overlay');
+        const mobileMenuClose = document.querySelector('.mobile-menu-close');
+        
+        if (mobileMenuBtn && mobileMenuOverlay && mobileMenuClose) {
+          mobileMenuBtn.addEventListener('click', () => {
+            mobileMenuOverlay.style.display = 'flex';
+          });
+          
+          mobileMenuClose.addEventListener('click', () => {
+            mobileMenuOverlay.style.display = 'none';
+          });
+        }
+      });
+    
+    // Load footer component
+    fetch('/components/footer/footer.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('footer-container').innerHTML = data;
+      });
+    
+    // Animation on scroll
+    document.addEventListener('DOMContentLoaded', () => {
+      const animatedElements = document.querySelectorAll('.slide-up, .slide-in-left, .slide-in-right');
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = 1;
+            entry.target.style.transform = 'translateY(0) translateX(0)';
+          }
+        });
+      }, { threshold: 0.1 });
+      
+      animatedElements.forEach(element => {
+        element.style.opacity = 0;
+        
+        if (element.classList.contains('slide-up')) {
+          element.style.transform = 'translateY(50px)';
+        } else if (element.classList.contains('slide-in-left')) {
+          element.style.transform = 'translateX(-50px)';
+        } else if (element.classList.contains('slide-in-right')) {
+          element.style.transform = 'translateX(50px)';
+        }
+        
+        element.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+        observer.observe(element);
+      });
+    });
+  </script>
+</body>
+</html>

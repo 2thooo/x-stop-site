@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment - X Stop</title>
+  <meta name="description" content="Complete your booking payment for X Stop activities in Ras Al Khaimah.">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/images/9a1da8f0-a67e-4eb7-bf71-1242ee347333.jpeg" type="image/jpeg">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <link rel="stylesheet" href="/assets/css/enhanced-styles.css">
+  
+  <style>
+    .payment-page {
+      padding-top: 120px;
+      padding-bottom: 80px;
+    }
+    
+    .payment-page-title {
+      text-align: center;
+      margin-bottom: 40px;
+      color: var(--x-yellow);
+    }
+    
+    .payment-container {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+    }
+    
+    .payment-summary {
+      flex: 1;
+      min-width: 300px;
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 10px;
+    }
+    
+    .payment-summary h3 {
+      color: var(--x-yellow);
+      margin-bottom: 20px;
+    }
+    
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .summary-item.total {
+      margin-top: 20px;
+      border-top: 2px solid rgba(255, 255, 255, 0.2);
+      border-bottom: none;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    
+    .summary-item.total .summary-value {
+      color: var(--x-yellow);
+    }
+    
+    .payment-form-container {
+      flex: 2;
+      min-width: 400px;
+    }
+    
+    .payment-methods {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .payment-method {
+      flex: 1;
+      min-width: 120px;
+    }
+    
+    .payment-method input[type="radio"] {
+      display: none;
+    }
+    
+    .payment-method label {
+      display: block;
+      text-align: center;
+      padding: 15px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .payment-method input[type="radio"]:checked + label {
+      background-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 0 2px var(--x-yellow);
+    }
+    
+    .payment-method label i {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      display: block;
+    }
+    
+    .payment-method-section {
+      display: none;
+      margin-bottom: 30px;
+    }
+    
+    .payment-method-section.active {
+      display: block;
+    }
+    
+    .card-row {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .card-row .form-group {
+      flex: 1;
+    }
+    
+    .form-group.card-number {
+      flex: 2;
+    }
+    
+    .secure-payment-info {
+      display: flex;
+      align-items: center;
+      margin-top: 20px;
+      padding: 15px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+    
+    .secure-payment-info i {
+      font-size: 2rem;
+      margin-right: 15px;
+      color: var(--x-yellow);
+    }
+    
+    .secure-payment-info p {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+      .payment-container {
+        flex-direction: column;
+      }
+      
+      .payment-form-container,
+      .payment-summary {
+        min-width: 100%;
+      }
+      
+      .card-row {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div id="header-container"></div>
+  
+  <!-- Payment Page Content -->
+  <section class="payment-page">
+    <div class="container">
+      <h1 class="payment-page-title fade-in">Complete Your Booking</h1>
+      
+      <div class="payment-container">
+        <!-- Booking Summary -->
+        <div class="payment-summary slide-in-left">
+          <h3>Booking Summary</h3>
+          <div id="booking-summary">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+        
+        <!-- Payment Form -->
+        <div class="payment-form-container slide-in-right">
+          <form id="payment-form">
+            <input type="hidden" id="payment-amount" name="payment-amount" value="0">
+            
+            <h3>Select Payment Method</h3>
+            <div class="payment-methods">
+              <div class="payment-method">
+                <input type="radio" id="credit-card" name="payment-method" value="credit-card" checked>
+                <label for="credit-card">
+                  <i class="fas fa-credit-card"></i>
+                  Credit Card
+                </label>
+              </div>
+              
+              <div class="payment-method">
+                <input type="radio" id="paypal" name="payment-method" value="paypal">
+                <label for="paypal">
+                  <i class="fab fa-paypal"></i>
+                  PayPal
+                </label>
+              </div>
+              
+              <div class="payment-method">
+                <input type="radio" id="apple-pay" name="payment-method" value="apple-pay">
+                <label for="apple-pay">
+                  <i class="fab fa-apple-pay"></i>
+                  Apple Pay
+                </label>
+              </div>
+              
+              <div class="payment-method">
+                <input type="radio" id="google-pay" name="payment-method" value="google-pay">
+                <label for="google-pay">
+                  <i class="fab fa-google-pay"></i>
+                  Google Pay
+                </label>
+              </div>
+            </div>
+            
+            <!-- Credit Card Section -->
+            <div id="credit-card-section" class="payment-method-section" style="display: block;">
+              <div class="form-group">
+                <label for="card-holder" class="form-label">Card Holder Name</label>
+                <input type="text" id="card-holder" name="card-holder" class="form-input" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="card-number" class="form-label">Card Number</label>
+                <input type="text" id="card-number" name="card-number" class="form-input" placeholder="1234 5678 9012 3456" maxlength="19" required>
+              </div>
+              
+              <div class="card-row">
+                <div class="form-group">
+                  <label for="card-expiry" class="form-label">Expiry Date</label>
+                  <input type="text" id="card-expiry" name="card-expiry" class="form-input" placeholder="MM/YY" maxlength="5" required>
+                </div>
+                
+                <div class="form-group">
+                  <label for="card-cvc" class="form-label">CVC</label>
+                  <input type="text" id="card-cvc" name="card-cvc" class="form-input" placeholder="123" maxlength="3" required>
+                </div>
+              </div>
+            </div>
+            
+            <!-- PayPal Section -->
+            <div id="paypal-section" class="payment-method-section">
+              <p>You will be redirected to PayPal to complete your payment after clicking "Pay Now".</p>
+            </div>
+            
+            <!-- Apple Pay Section -->
+            <div id="apple-pay-section" class="payment-method-section">
+              <p>You will be prompted to confirm payment with Apple Pay after clicking "Pay Now".</p>
+            </div>
+            
+            <!-- Google Pay Section -->
+            <div id="google-pay-section" class="payment-method-section">
+              <p>You will be prompted to confirm payment with Google Pay after clicking "Pay Now".</p>
+            </div>
+            
+            <div class="secure-payment-info">
+              <i class="fas fa-lock"></i>
+              <p>Your payment information is secure. We use industry-standard encryption to protect your data.</p>
+            </div>
+            
+            <button type="submit" class="btn-primary btn-block">Pay Now</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div id="footer-container"></div>
+
+  <!-- Scripts -->
+  <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/payment-enhanced.js"></script>
+</body>
+</html>

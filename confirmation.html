@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Confirmation - X Stop</title>
+  <meta name="description" content="Booking confirmation for your X Stop activities in Ras Al Khaimah.">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/images/9a1da8f0-a67e-4eb7-bf71-1242ee347333.jpeg" type="image/jpeg">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <link rel="stylesheet" href="/assets/css/enhanced-styles.css">
+  
+  <style>
+    .confirmation-page {
+      padding-top: 120px;
+      padding-bottom: 80px;
+    }
+    
+    .confirmation-page-title {
+      text-align: center;
+      margin-bottom: 40px;
+      color: var(--x-yellow);
+    }
+    
+    .confirmation-container {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    
+    .confirmation-box {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 40px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .confirmation-icon {
+      font-size: 5rem;
+      color: var(--x-yellow);
+      margin-bottom: 20px;
+    }
+    
+    .confirmation-message {
+      margin-bottom: 30px;
+    }
+    
+    .confirmation-message h2 {
+      color: var(--x-yellow);
+      margin-bottom: 15px;
+    }
+    
+    .confirmation-code {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin: 20px 0;
+      color: var(--x-yellow);
+    }
+    
+    .confirmation-details {
+      text-align: left;
+      margin: 30px 0;
+      background-color: rgba(255, 255, 255, 0.03);
+      padding: 20px;
+      border-radius: 10px;
+    }
+    
+    .confirmation-details h3 {
+      color: var(--x-yellow);
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .detail-item:last-child {
+      border-bottom: none;
+    }
+    
+    .detail-item.total {
+      margin-top: 15px;
+      border-top: 2px solid rgba(255, 255, 255, 0.2);
+      font-weight: 700;
+    }
+    
+    .detail-item.total .detail-value {
+      color: var(--x-yellow);
+    }
+    
+    .confirmation-actions {
+      margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+    }
+    
+    .confirmation-actions .btn {
+      min-width: 200px;
+    }
+    
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--x-white);
+      border: 2px solid var(--x-purple);
+    }
+    
+    .btn-secondary:hover {
+      background-color: var(--x-purple);
+    }
+    
+    .confirmation-note {
+      margin-top: 30px;
+      padding: 15px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+    
+    .confirmation-note p {
+      margin-bottom: 10px;
+    }
+    
+    .confirmation-note p:last-child {
+      margin-bottom: 0;
+    }
+    
+    @media (max-width: 768px) {
+      .confirmation-box {
+        padding: 30px 20px;
+      }
+      
+      .confirmation-actions {
+        flex-direction: column;
+      }
+      
+      .confirmation-actions .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div id="header-container"></div>
+  
+  <!-- Confirmation Page Content -->
+  <section class="confirmation-page">
+    <div class="container">
+      <div class="confirmation-container">
+        <div class="confirmation-box slide-in-up">
+          <div class="confirmation-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          
+          <div class="confirmation-message">
+            <h2>Booking Confirmed!</h2>
+            <p>Thank you for your booking. Your reservation has been confirmed and payment has been processed successfully.</p>
+          </div>
+          
+          <div>
+            <p>Your Confirmation Code:</p>
+            <div class="confirmation-code" id="confirmation-code">XS-XXXXXX</div>
+          </div>
+          
+          <div class="confirmation-details" id="confirmation-details">
+            <h3>Booking Details</h3>
+            <!-- Will be populated by JavaScript -->
+          </div>
+          
+          <div class="confirmation-actions">
+            <a href="/" class="btn-primary">Return to Homepage</a>
+            <button id="print-confirmation" class="btn-secondary">
+              <i class="fas fa-print"></i> Print Confirmation
+            </button>
+          </div>
+          
+          <div class="confirmation-note">
+            <p><strong>Important:</strong> Please arrive 15 minutes before your scheduled time. Bring your confirmation code or show this page at the reception.</p>
+            <p>For any questions or changes to your booking, please contact us at +971 55 749 0383 or email info.xholdings@gmail.com.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div id="footer-container"></div>
+
+  <!-- Scripts -->
+  <script src="/assets/js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get confirmation data from session storage
+      const confirmationDataString = sessionStorage.getItem('confirmationData');
+      
+      if (!confirmationDataString) {
+        // No confirmation data found, redirect to booking page
+        window.location.href = '/booking.html';
+        return;
+      }
+      
+      const confirmationData = JSON.parse(confirmationDataString);
+      const bookingData = confirmationData.bookingData;
+      
+      // Activity data with pricing and details
+      const activityData = {
+        'laser-tag': {
+          name: 'Laser Tag',
+          price: 80,
+          unit: 'per hour'
+        },
+        'horror-escape': {
+          name: 'Horror Escape Room',
+          price: 80,
+          unit: 'per session'
+        },
+        'kids-area': {
+          name: 'Kids Area',
+          price: 30,
+          unit: 'per hour'
+        },
+        'face-painting': {
+          name: 'Face Painting',
+          price: 10,
+          unit: 'per person'
+        },
+        'smash-room-small': {
+          name: 'Smash Room - Small Package',
+          price: 50,
+          unit: 'per session'
+        },
+        'smash-room-medium': {
+          name: 'Smash Room - Medium Package',
+          price: 80,
+          unit: 'per session'
+        },
+        'smash-room-large': {
+          name: 'Smash Room - Large Package',
+          price: 120,
+          unit: 'per session'
+        },
+        'billiard': {
+          name: 'Billiard',
+          price: 40,
+          unit: 'per hour'
+        },
+        'playstation': {
+          name: 'PlayStation',
+          price: 30,
+          unit: 'per hour'
+        },
+        'pc-gaming': {
+          name: 'PC Gaming',
+          price: 25,
+          unit: 'per hour'
+        }
+      };
+
+      // Branch data
+      const branchData = {
+        'rak-mall': 'X Entertainment RAK Mall',
+        'rifaa': 'X Entertainment Rifaa Branch',
+        'sharjah': 'Expert Billiard - Sharjah (Al Majaz)',
+        'super-bowling': 'X Café - Super Bowling Branch',
+        'haunted-cafe': 'Haunted X Café - RAK'
+      };
+      
+      // Display confirmation code
+      document.getElementById('confirmation-code').textContent = confirmationData.confirmationCode;
+      
+      // Populate confirmation details
+      const detailsContainer = document.getElementById('confirmation-details');
+      if (detailsContainer) {
+        const activity = activityData[bookingData.activity] || { name: 'Unknown Activity', price: 0, unit: '' };
+        const branchName = branchData[bookingData.branch] || 'Unknown Branch';
+        
+        // Calculate price
+        let price = activity.price;
+        
+        // For per-person activities like face painting, we multiply by people
+        if (bookingData.activity === 'face-painting') {
+          price *= bookingData['people-count'];
+        }
+        
+        // Format date
+        const bookingDate = new Date(bookingData['booking-date']);
+        const formattedDate = bookingDate.toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        
+        // Format payment date
+        const paymentDate = new Date(confirmationData.paymentDate);
+        const formattedPaymentDate = paymentDate.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }) + ' ' + paymentDate.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        // Create details HTML
+        let detailsHTML = `
+          <div class="detail-item">
+            <span class="detail-label">Branch:</span>
+            <span class="detail-value">${branchName}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Activity:</span>
+            <span class="detail-value">${activity.name}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Date:</span>
+            <span class="detail-value">${formattedDate}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Time:</span>
+            <span class="detail-value">${bookingData['booking-time']}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">People:</span>
+            <span class="detail-value">${bookingData['people-count']}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Name:</span>
+            <span class="detail-value">${bookingData['customer-name']}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Payment Method:</span>
+            <span class="detail-value">${formatPaymentMethod(confirmationData.paymentMethod)}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Payment Date:</span>
+            <span class="detail-value">${formattedPaymentDate}</span>
+          </div>
+          <div class="detail-item total">
+            <span class="detail-label">Total Paid:</span>
+            <span class="detail-value">${price} DHS</span>
+          </div>
+        `;
+        
+        detailsContainer.innerHTML = `<h3>Booking Details</h3>${detailsHTML}`;
+      }
+      
+      // Print confirmation
+      const printButton = document.getElementById('print-confirmation');
+      if (printButton) {
+        printButton.addEventListener('click', function() {
+          window.print();
+        });
+      }
+      
+      // Format payment method for display
+      function formatPaymentMethod(method) {
+        switch (method) {
+          case 'credit-card':
+            return 'Credit Card';
+          case 'paypal':
+            return 'PayPal';
+          case 'apple-pay':
+            return 'Apple Pay';
+          case 'google-pay':
+            return 'Google Pay';
+          default:
+            return method;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

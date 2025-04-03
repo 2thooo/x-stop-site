@@ -1,0 +1,89 @@
+<!-- Branch template for X Stop locations -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{BRANCH_NAME}} | X Stop</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/enhanced-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header will be loaded dynamically -->
+    <div id="header-container"></div>
+
+    <main class="branch-page">
+        <div class="container">
+            <div class="branch-hero">
+                <h1>{{BRANCH_NAME}}</h1>
+                <div class="branch-details">
+                    <div class="branch-info">
+                        <p class="branch-timing"><i class="fas fa-clock"></i> {{BRANCH_HOURS}}</p>
+                        <p class="branch-phone"><i class="fas fa-phone"></i> {{BRANCH_PHONE}}</p>
+                        <div class="social-media-links">
+                            {{BRANCH_SOCIAL_MEDIA}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Maps integration -->
+            <div class="branch-map-container">
+                <div id="branch-map" data-branch-id="{{BRANCH_ID}}"></div>
+                <a href="https://www.google.com/maps/dir/?api=1&destination={{BRANCH_LAT}},{{BRANCH_LNG}}" 
+                   target="_blank" class="directions-button">
+                    <i class="fas fa-directions"></i> Get Directions
+                </a>
+            </div>
+
+            <div class="branch-content">
+                <div class="branch-description">
+                    <h2>About {{BRANCH_NAME}}</h2>
+                    <p>{{BRANCH_DESCRIPTION}}</p>
+                </div>
+
+                <!-- Activities available at this branch -->
+                <div class="branch-activities">
+                    <h2>Available Activities</h2>
+                    <div class="activities-grid">
+                        {{BRANCH_ACTIVITIES}}
+                    </div>
+                </div>
+
+                <!-- Special offers or events -->
+                <div class="branch-special-offers">
+                    <h2>Special Offers</h2>
+                    <div class="offers-grid">
+                        {{BRANCH_OFFERS}}
+                    </div>
+                </div>
+
+                <!-- Booking CTA -->
+                <div class="booking-cta">
+                    <h2>Ready to Visit?</h2>
+                    <p>Book your experience at {{BRANCH_NAME}} now!</p>
+                    <a href="../../booking.html?branch={{BRANCH_ID}}" class="cta-button">Book Now</a>
+                    
+                    <!-- Special booking information -->
+                    <div class="special-booking-info">
+                        <h3>For Birthday Parties & Special Events:</h3>
+                        <p><i class="fas fa-phone"></i> +971 55 749 0383 (Contact the Owner)</p>
+                        <p><i class="fas fa-envelope"></i> info.xholdings@gmail.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer will be loaded dynamically -->
+    <div id="footer-container"></div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/navigation.js"></script>
+    <script src="../../assets/js/maps/branch-maps.js"></script>
+    <script src="../../assets/js/social-media.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initBranchMap" async defer></script>
+</body>
+</html>
