@@ -1,0 +1,200 @@
+.social-media-links {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.social-media-link {
+  display: flex;
+  align-items: center;
+  color: var(--x-white);
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.social-media-link:hover {
+  color: var(--x-yellow);
+}
+
+.social-media-link i {
+  font-size: 1.2rem;
+  margin-right: 8px;
+}
+
+.social-media-link[data-platform="instagram"] i {
+  color: #E1306C;
+}
+
+.social-media-link[data-platform="whatsapp"] i {
+  color: #25D366;
+}
+
+.social-media-link[data-platform="facebook"] i {
+  color: #4267B2;
+}
+
+.social-media-link[data-platform="twitter"] i {
+  color: #1DA1F2;
+}
+
+.whatsapp-button {
+  display: inline-flex;
+  align-items: center;
+  background-color: #25D366;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.whatsapp-button:hover {
+  background-color: #128C7E;
+}
+
+.whatsapp-button i {
+  font-size: 1.2rem;
+  margin-right: 8px;
+}
+
+.instagram-feed {
+  margin-top: 30px;
+}
+
+.instagram-placeholder {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.instagram-placeholder h3 {
+  color: #E1306C;
+  margin-bottom: 15px;
+}
+
+.instagram-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 20px 0;
+}
+
+@media (min-width: 768px) {
+  .instagram-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.instagram-post {
+  position: relative;
+  aspect-ratio: 1/1;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.instagram-post.placeholder::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+}
+
+.post-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: space-around;
+}
+
+.post-overlay i {
+  margin-right: 5px;
+}
+
+.view-more {
+  display: inline-flex;
+  align-items: center;
+  color: #E1306C;
+  text-decoration: none;
+  font-weight: 600;
+  margin-top: 15px;
+}
+
+.view-more i {
+  margin-right: 8px;
+}
+
+.social-share-links {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.social-share-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--x-white);
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.social-share-link:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.whatsapp-order-form {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 30px;
+  border-radius: 10px;
+  margin-top: 30px;
+  border-left: 4px solid #25D366;
+}
+
+.whatsapp-order-form h3 {
+  color: var(--x-yellow);
+  margin-bottom: 20px;
+}
+
+.whatsapp-order-form .form-group {
+  margin-bottom: 15px;
+}
+
+.whatsapp-submit {
+  background-color: #25D366;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 30px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.whatsapp-submit:hover {
+  background-color: #128C7E;
+}
+
+.whatsapp-submit i {
+  margin-right: 8px;
+}

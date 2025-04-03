@@ -1,0 +1,123 @@
+<!-- Gallery page template for X Stop -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery | X Stop</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/enhanced-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header will be loaded dynamically -->
+    <div id="header-container"></div>
+
+    <main class="gallery-page">
+        <div class="container">
+            <div class="page-hero">
+                <h1>X Stop Gallery</h1>
+                <p>Check out the fun and excitement at our branches!</p>
+            </div>
+
+            <!-- Instagram Feed Integration -->
+            <section class="instagram-section">
+                <h2>Follow Us on Instagram</h2>
+                
+                <div class="instagram-accounts">
+                    <div class="instagram-account">
+                        <h3>X Stop</h3>
+                        <div id="instagram-feed" class="instagram-feed" data-account="xstop"></div>
+                    </div>
+                    
+                    <div class="instagram-account">
+                        <h3>Haunted X Café</h3>
+                        <div class="instagram-feed" data-account="hauntedxcafe"></div>
+                        <a href="https://www.instagram.com/hauntedxcafe/" target="_blank" class="view-more">
+                            <i class="fab fa-instagram"></i> @hauntedxcafe
+                        </a>
+                    </div>
+                    
+                    <div class="instagram-account">
+                        <h3>X Flower RAK</h3>
+                        <div class="instagram-feed" data-account="xflower_rak"></div>
+                        <a href="https://www.instagram.com/xflower_rak/" target="_blank" class="view-more">
+                            <i class="fab fa-instagram"></i> @xflower_rak
+                        </a>
+                        <div class="whatsapp-order">
+                            <p>Order flowers via WhatsApp:</p>
+                            <a href="https://wa.me/971547190018" class="whatsapp-button" data-phone="971547190018">
+                                <i class="fab fa-whatsapp"></i> Order Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Photo Gallery -->
+            <section class="photo-gallery">
+                <h2>Activity Photos</h2>
+                
+                <div class="gallery-filter">
+                    <button class="filter-button active" data-filter="all">All</button>
+                    <button class="filter-button" data-filter="laser-tag">Laser Tag</button>
+                    <button class="filter-button" data-filter="horror-escape">Horror Escape</button>
+                    <button class="filter-button" data-filter="kids-area">Kids Area</button>
+                    <button class="filter-button" data-filter="smash-room">Smash Room</button>
+                    <button class="filter-button" data-filter="billiard">Billiard</button>
+                    <button class="filter-button" data-filter="gaming">Gaming</button>
+                    <button class="filter-button" data-filter="cafe">Café</button>
+                    <button class="filter-button" data-filter="flowers">Flowers</button>
+                </div>
+                
+                <div class="gallery-grid">
+                    <!-- Gallery items will be loaded dynamically -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer will be loaded dynamically -->
+    <div id="footer-container"></div>
+
+    <!-- Scripts -->
+    <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/navigation.js"></script>
+    <script src="../assets/js/social-media.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Instagram feeds
+            const instagramFeeds = document.querySelectorAll('.instagram-feed');
+            instagramFeeds.forEach(feed => {
+                const account = feed.getAttribute('data-account');
+                if (account) {
+                    loadInstagramEmbed(account);
+                }
+            });
+            
+            // Gallery filtering
+            const filterButtons = document.querySelectorAll('.filter-button');
+            const galleryItems = document.querySelectorAll('.gallery-item');
+            
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const filter = this.getAttribute('data-filter');
+                    
+                    // Update active button
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Filter gallery items
+                    galleryItems.forEach(item => {
+                        if (filter === 'all' || item.classList.contains(filter)) {
+                            item.style.display = 'block';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

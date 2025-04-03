@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expert Billiard - Sharjah (Al Majaz) | X Stop</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/enhanced-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header will be loaded dynamically -->
+    <div id="header-container"></div>
+
+    <main class="branch-page">
+        <div class="container">
+            <div class="branch-hero">
+                <h1>Expert Billiard - Sharjah (Al Majaz)</h1>
+                <div class="branch-details">
+                    <div class="branch-info">
+                        <p class="branch-timing"><i class="fas fa-clock"></i> Daily 10 AM – 12 AM</p>
+                        <p class="branch-phone"><i class="fas fa-phone"></i> +971 55 749 0383</p>
+                        <div class="social-media-links">
+                            <a href="https://www.instagram.com/xstop/" target="_blank" class="social-media-link" data-platform="instagram">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Maps integration -->
+            <div class="branch-map-container">
+                <div id="branch-map" data-branch-id="sharjah"></div>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=25.3461,55.3845" 
+                   target="_blank" class="directions-button">
+                    <i class="fas fa-directions"></i> Get Directions
+                </a>
+            </div>
+
+            <div class="branch-content">
+                <div class="branch-description">
+                    <h2>About Expert Billiard - Sharjah (Al Majaz)</h2>
+                    <p>Our Sharjah branch specializes in billiards, offering a premium experience for billiard enthusiasts. Located in the Al Majaz area, this branch provides a sophisticated environment for both casual players and serious competitors.</p>
+                    <p>With professional-grade tables and equipment, Expert Billiard is the perfect place to enjoy a game with friends or improve your skills.</p>
+                </div>
+
+                <!-- Activities available at this branch -->
+                <div class="branch-activities">
+                    <h2>Available Activities</h2>
+                    <div class="activities-grid">
+                        <div class="activity-card">
+                            <div class="activity-image">
+                                <img src="../../assets/images/billiard.jpg" alt="Billiard">
+                            </div>
+                            <div class="activity-content">
+                                <h3>Billiard</h3>
+                                <p class="activity-price">AED 40 per hour</p>
+                                <p>Enjoy a game of billiards on our professional tables.</p>
+                                <a href="../../booking.html?branch=sharjah&activity=billiard" class="activity-button">Book Now</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special offers or events -->
+                <div class="branch-special-offers">
+                    <h2>Special Offers</h2>
+                    <div class="offers-grid">
+                        <div class="offer-card">
+                            <div class="offer-badge">Weekly</div>
+                            <h3>Tournament Tuesdays</h3>
+                            <p>Join our weekly billiard tournaments every Tuesday at 7 PM</p>
+                            <p class="offer-dates">Registration starts at 6 PM</p>
+                            <a href="../../booking.html?branch=sharjah" class="offer-button">Book Now</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking CTA -->
+                <div class="booking-cta">
+                    <h2>Ready to Visit?</h2>
+                    <p>Book your experience at Expert Billiard - Sharjah now!</p>
+                    <a href="../../booking.html?branch=sharjah" class="cta-button">Book Now</a>
+                    
+                    <!-- Special booking information -->
+                    <div class="special-booking-info">
+                        <h3>For Tournament Registration & Special Events:</h3>
+                        <p><i class="fas fa-phone"></i> +971 55 749 0383 (Contact the Owner)</p>
+                        <p><i class="fas fa-envelope"></i> info.xholdings@gmail.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer will be loaded dynamically -->
+    <div id="footer-container"></div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/navigation.js"></script>
+    <script src="../../assets/js/maps/branch-maps.js"></script>
+    <script src="../../assets/js/social-media.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initBranchMap" async defer></script>
+</body>
+</html>

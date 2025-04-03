@@ -1,0 +1,133 @@
+🔧 CORE FIXES & ADDITIONS
+1. Branch Listings & Details
+Please make sure the site includes all the following branches, each with:
+
+Google Maps location
+
+Opening hours
+
+Phone number
+
+Instagram link (if available)
+
+✅ RAK Mall Branch (X Entertainment + X Café + X Flower)
+Timing: Daily 10 AM – 2 AM
+
+📍 Location
+
+✅ Rifaa Branch – X Entertainment
+Timing: Daily 4 PM – 2 AM
+
+📍 Location
+
+✅ Expert Billiard – Sharjah (Al Majaz)
+Note: This branch is not new — it just wasn’t listed before
+
+📍 Location
+
+✅ X Café – Super Bowling Branch
+📍 Location
+
+✅ Haunted X Café – RAK
+Timing: 4 PM – 2 AM
+
+📍 Location
+
+Instagram: @hauntedxcafe
+
+2. Instagram & Social Media
+Add a prominent Instagram icon linking to X STOP's official page
+
+Add flower shop Instagram: X Flower RAK
+
+Add more social links (like TikTok or Snapchat) if available in the future
+
+3. Contact & Booking
+For all birthday bookings or events, display this:
+📞 +971 55 749 0383 (Contact the Owner)
+📧 info.xholdings@gmail.com
+
+WhatsApp orders for X Flower:
+wa.me/971547190018
+
+In the booking system, restrict branch options based on what activities are actually available at each location. For example:
+
+Smash Room: only available in RAK Mall
+
+PlayStation: only in Rifaa
+
+Billiard: Sharjah
+
+Don’t let users select the wrong branch for a certain activity.
+
+Clarify where booking notifications are currently being sent (email or phone). Make sure they reach the admin/owner.
+
+📸 CONTENT & DESIGN IMPROVEMENTS
+4. Visual Flow
+The homepage currently feels cluttered — simplify the layout:
+
+Start with Activities with large clean visuals (1 image per activity)
+
+Then list Branches, each with a neat card-style design
+
+Add a section for Café menus and Flowers
+
+Keep it visual, clean, and mobile-friendly
+
+5. Menu & Flower Pricing
+For X Flower, please remove all placeholder bouquets and instead:
+
+Embed or link to @xflower_rak Instagram
+
+Mention flower orders are accepted via WhatsApp: wa.me/971547190018
+
+💸 PRICING SECTIONS
+🎨 Kids Area
+AED 30/hour
+
+Face Painting: AED 10
+
+🔨 Smash Room (RAK Mall Only)
+AED 50 – Small Pack
+
+AED 80 – Medium Pack
+
+AED 120 – Large Pack
+(Include visuals or icons showing helmets, bats, glass items etc.)
+
+💡 EXTRA FEATURES & IDEAS (Recommended)
+Here are some additional ideas that could really take the website to the next level:
+
+6. Activity Filter/Search
+Let users filter activities by:
+
+Age group (Kids, Adults)
+
+Type (Relaxing, Competitive, Scary, etc.)
+
+Location
+
+7. Gallery Page
+Add a "Gallery" page that syncs Instagram posts automatically (e.g. from X STOP or Haunted X Café)
+
+8. Events & Packages Page
+A dedicated section for:
+
+Birthday packages
+
+Group bookings
+
+Corporate events
+
+Special offers
+
+9. Loyalty or Points System (future idea)
+Add a placeholder for a future loyalty/reward system
+
+10. Multilingual Support
+Add Arabic as a second language option (can be done later, but important for local users)
+
+🎯 Final Touches
+Use reference from https://xstrike.com for how to design a clean booking layout and activity structure.
+
+Ensure fast loading, mobile responsiveness, and clear navigation.

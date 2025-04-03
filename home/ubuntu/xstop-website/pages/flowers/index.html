@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>X Flowers - X Stop</title>
+  <meta name="description" content="Beautiful flower arrangements and bouquets at X Flowers in RAK Mall. Order online or via WhatsApp.">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/images/9a1da8f0-a67e-4eb7-bf71-1242ee347333.jpeg" type="image/jpeg">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <link rel="stylesheet" href="/assets/css/enhanced-styles.css">
+  <link rel="stylesheet" href="/assets/css/social-media.css">
+</head>
+<body>
+  <!-- Header -->
+  <div id="header-container"></div>
+  
+  <!-- Flower Shop Page Content -->
+  <section class="flower-shop-page">
+    <div class="container">
+      <div class="page-header">
+        <h1 class="page-title fade-in">X Flowers</h1>
+        <p class="page-subtitle">Beautiful arrangements for every occasion</p>
+        
+        <!-- Social Media Links -->
+        <div class="social-media-links">
+          <a href="https://www.instagram.com/xflowerrak/" target="_blank" class="social-media-link" data-platform="instagram">
+            <i class="fab fa-instagram"></i> @xflowerrak
+          </a>
+          <a href="https://wa.me/971547190018" target="_blank" class="social-media-link" data-platform="whatsapp">
+            <i class="fab fa-whatsapp"></i> WhatsApp Order
+          </a>
+        </div>
+      </div>
+      
+      <div class="flower-shop-content">
+        <div class="shop-info slide-in-left">
+          <div class="info-card">
+            <h2>Visit Our Shop</h2>
+            <p><i class="fas fa-map-marker-alt"></i> RAK Mall, Ground Floor</p>
+            <p><i class="fas fa-clock"></i> Daily 10 AM – 10 PM</p>
+            <p><i class="fas fa-phone"></i> +971 54 719 0018</p>
+            
+            <!-- WhatsApp Order Button -->
+            <a href="https://wa.me/971547190018?text=Hello%20X%20Flower!%20I%20would%20like%20to%20place%20an%20order." 
+               target="_blank" class="whatsapp-button">
+              <i class="fab fa-whatsapp"></i> Order via WhatsApp
+            </a>
+          </div>
+          
+          <!-- Instagram Feed -->
+          <div class="instagram-feed" data-account="xflowerrak"></div>
+        </div>
+        
+        <div class="flower-collections slide-in-right">
+          <h2>Our Collections</h2>
+          
+          <div class="collection-grid">
+            <div class="collection-card">
+              <div class="collection-image placeholder"></div>
+              <h3>Romantic Bouquets</h3>
+              <p>Express your love with our beautiful romantic arrangements.</p>
+              <p class="collection-price">Starting from 150 DHS</p>
+              <a href="#whatsapp-order" class="btn-secondary">Order Now</a>
+            </div>
+            
+            <div class="collection-card">
+              <div class="collection-image placeholder"></div>
+              <h3>Celebration Bouquets</h3>
+              <p>Perfect for birthdays, graduations, and special achievements.</p>
+              <p class="collection-price">Starting from 120 DHS</p>
+              <a href="#whatsapp-order" class="btn-secondary">Order Now</a>
+            </div>
+            
+            <div class="collection-card">
+              <div class="collection-image placeholder"></div>
+              <h3>Luxury Arrangements</h3>
+              <p>Premium flowers in elegant vases and luxury packaging.</p>
+              <p class="collection-price">Starting from 250 DHS</p>
+              <a href="#whatsapp-order" class="btn-secondary">Order Now</a>
+            </div>
+            
+            <div class="collection-card">
+              <div class="collection-image placeholder"></div>
+              <h3>Sympathy Flowers</h3>
+              <p>Express your condolences with tasteful arrangements.</p>
+              <p class="collection-price">Starting from 180 DHS</p>
+              <a href="#whatsapp-order" class="btn-secondary">Order Now</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- WhatsApp Order Form -->
+      <div id="whatsapp-order" class="whatsapp-order-section">
+        <form id="whatsapp-order-form" class="whatsapp-order-form">
+          <h3><i class="fab fa-whatsapp"></i> Order via WhatsApp</h3>
+          <p>Fill out this form to place your order directly through WhatsApp.</p>
+          
+          <div class="form-group">
+            <label for="whatsapp-name" class="form-label">Your Name</label>
+            <input type="text" id="whatsapp-name" name="whatsapp-name" class="form-input" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="whatsapp-phone" class="form-label">Your Phone Number</label>
+            <input type="tel" id="whatsapp-phone" name="whatsapp-phone" class="form-input" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="whatsapp-product" class="form-label">Product/Collection</label>
+            <select id="whatsapp-product" name="whatsapp-product" class="form-select" required>
+              <option value="" disabled selected>Select a collection</option>
+              <option value="Romantic Bouquet">Romantic Bouquet</option>
+              <option value="Celebration Bouquet">Celebration Bouquet</option>
+              <option value="Luxury Arrangement">Luxury Arrangement</option>
+              <option value="Sympathy Flowers">Sympathy Flowers</option>
+              <option value="Custom Order">Custom Order</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="whatsapp-message" class="form-label">Your Message</label>
+            <textarea id="whatsapp-message" name="whatsapp-message" class="form-input" rows="4" placeholder="Please include any specific requirements, delivery details, or special requests."></textarea>
+          </div>
+          
+          <button type="submit" class="whatsapp-submit">
+            <i class="fab fa-whatsapp"></i> Send Order via WhatsApp
+          </button>
+        </form>
+      </div>
+      
+      <!-- Delivery Information -->
+      <div class="delivery-info">
+        <h2>Delivery Information</h2>
+        <div class="info-grid">
+          <div class="info-card">
+            <i class="fas fa-truck"></i>
+            <h3>Same-Day Delivery</h3>
+            <p>Order before 2 PM for same-day delivery within Ras Al Khaimah.</p>
+          </div>
+          
+          <div class="info-card">
+            <i class="fas fa-map-marked-alt"></i>
+            <h3>Delivery Areas</h3>
+            <p>We deliver to all areas in Ras Al Khaimah and neighboring emirates.</p>
+          </div>
+          
+          <div class="info-card">
+            <i class="fas fa-money-bill-wave"></i>
+            <h3>Payment Options</h3>
+            <p>Cash on delivery, bank transfer, or credit card payment available.</p>
+          </div>
+          
+          <div class="info-card">
+            <i class="fas fa-gift"></i>
+            <h3>Gift Options</h3>
+            <p>Add a personalized message card or additional gifts to your order.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div id="footer-container"></div>
+
+  <!-- Scripts -->
+  <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/social-media-enhanced.js"></script>
+  
+  <style>
+    .flower-shop-page {
+      padding-top: 120px;
+      padding-bottom: 80px;
+    }
+    
+    .page-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+    
+    .page-title {
+      color: var(--x-yellow);
+      margin-bottom: 10px;
+    }
+    
+    .page-subtitle {
+      font-size: 1.2rem;
+      opacity: 0.8;
+    }
+    
+    .flower-shop-content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 40px;
+      margin-bottom: 60px;
+    }
+    
+    .shop-info {
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .flower-collections {
+      flex: 2;
+      min-width: 400px;
+    }
+    
+    .info-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+    
+    .info-card h2 {
+      color: var(--x-yellow);
+      margin-bottom: 20px;
+    }
+    
+    .info-card p {
+      margin-bottom: 15px;
+    }
+    
+    .info-card p i {
+      margin-right: 10px;
+      color: var(--x-yellow);
+    }
+    
+    .collection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 30px;
+    }
+    
+    .collection-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    
+    .collection-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .collection-image {
+      height: 200px;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .collection-image.placeholder {
+      background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    }
+    
+    .collection-card h3 {
+      padding: 20px 20px 10px;
+      color: var(--x-yellow);
+    }
+    
+    .collection-card p {
+      padding: 0 20px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+    
+    .collection-price {
+      font-weight: 600;
+      color: var(--x-yellow);
+    }
+    
+    .collection-card .btn-secondary {
+      margin: 0 20px 20px;
+      display: inline-block;
+    }
+    
+    .whatsapp-order-section {
+      margin-bottom: 60px;
+    }
+    
+    .delivery-info {
+      text-align: center;
+    }
+    
+    .delivery-info h2 {
+      color: var(--x-yellow);
+      margin-bottom: 40px;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 30px;
+    }
+    
+    .info-grid .info-card {
+      text-align: center;
+    }
+    
+    .info-grid .info-card i {
+      font-size: 2.5rem;
+      color: var(--x-yellow);
+      margin-bottom: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .flower-shop-content {
+        flex-direction: column;
+      }
+      
+      .shop-info,
+      .flower-collections {
+        min-width: 100%;
+      }
+    }
+  </style>
+</body>
+</html>
