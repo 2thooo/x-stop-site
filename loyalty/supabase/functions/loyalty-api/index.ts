@@ -245,7 +245,7 @@ Deno.serve(async request => {
       if (!body.sessionToken || !body.qrToken) throw new Error("SESSION_INVALID");
       const selectedActivity=activitySlug(body.activitySlug); const scanToken=randomToken();
       const scanTokenExpiresAt=new Date(Date.now()+SCAN_TOKEN_MINUTES*60000).toISOString();
-      const result=await rpc("member_summary",{
+      const result=await rpc("member_summary_v2",{
         p_session_hash:await sha256(String(body.sessionToken)),p_qr_hash:await sha256(String(body.qrToken)),
         p_activity_slug:selectedActivity,p_scan_token_hash:await sha256(scanToken),p_scan_token_expiry:scanTokenExpiresAt
       }); const row=result[0];
@@ -255,7 +255,8 @@ Deno.serve(async request => {
         displayName:row.display_name,memberCode:row.member_code,
         selectedActivity:{slug:row.activity_slug,name:row.activity_name,settingsVersion:row.activity_settings_version},activityBalances:row.activity_balances,
         points:row.points,rewardsAvailable:row.rewards_available,lastScannedAt:row.last_scanned_at,
-        pointsPerVisit:row.points_per_visit,rewardThreshold:row.reward_threshold,rewardText:row.reward_text,
+        pointsPerVisit:row.points_per_visit,rewardThreshold:row.reward_threshold,
+        rewardText:row.reward_text,rewardTextAr:row.reward_text_ar,
         scanTokenExpiresAt:row.scan_token_expires_at,qrSvg
       },200,origin);
     }
@@ -271,9 +272,10 @@ Deno.serve(async request => {
       const selectedActivity=activitySlug(body.activitySlug,false);
       const pointsPerVisit=Number(body.pointsPerVisit); const rewardThreshold=Number(body.rewardThreshold);
       const rewardText=String(body.rewardText || "").trim();
-      if (!Number.isInteger(pointsPerVisit) || pointsPerVisit<1 || pointsPerVisit>20 || !Number.isInteger(rewardThreshold) || rewardThreshold<2 || rewardThreshold>1000 || !rewardText || rewardText.length>200) throw new Error("INVALID_INPUT");
-      const result=await rpc("owner_update_activity_settings",{p_actor:actor,p_activity_slug:selectedActivity,p_points_per_visit:pointsPerVisit,p_reward_threshold:rewardThreshold,p_reward_text:rewardText}); const row=result[0];
-      return json({activity:{slug:row.activity_slug,name:row.activity_name},pointsPerVisit:row.points_per_visit,rewardThreshold:row.reward_threshold,rewardText:row.reward_text,settingsVersion:row.settings_version},200,origin);
+      const rewardTextAr=String(body.rewardTextAr || "").trim();
+      if (!Number.isInteger(pointsPerVisit) || pointsPerVisit<1 || pointsPerVisit>20 || !Number.isInteger(rewardThreshold) || rewardThreshold<2 || rewardThreshold>1000 || !rewardText || rewardText.length>200 || !rewardTextAr || rewardTextAr.length>200 || !/[ء-ي]/.test(rewardTextAr)) throw new Error("INVALID_INPUT");
+      const result=await rpc("owner_update_activity_settings_v2",{p_actor:actor,p_activity_slug:selectedActivity,p_points_per_visit:pointsPerVisit,p_reward_threshold:rewardThreshold,p_reward_text:rewardText,p_reward_text_ar:rewardTextAr}); const row=result[0];
+      return json({activity:{slug:row.activity_slug,name:row.activity_name},pointsPerVisit:row.points_per_visit,rewardThreshold:row.reward_threshold,rewardText:row.reward_text,rewardTextAr:row.reward_text_ar,settingsVersion:row.settings_version},200,origin);
     }
     if (action === "owner-create-pin-reset") {
       const customerId=body.customerId ? validUuid(body.customerId) : null;
@@ -288,8 +290,8 @@ Deno.serve(async request => {
     }
     if (action === "owner-scan") {
       const scanToken=opaqueCode(body.scanToken || body.qrToken);
-      const result=await rpc("owner_scan",{p_actor:actor,p_scan_token_hash:await sha256(scanToken)}); const row=result[0];
-      return json({scanEventId:row.scan_event_id,customerId:row.customer_id,displayName:row.display_name,activity:{slug:row.activity_slug,name:row.activity_name,settingsVersion:row.activity_settings_version},points:row.points,rewardsAvailable:row.rewards_available,scanCount:Number(row.scan_count),previousScanAt:row.previous_scan_at,pointsPerVisit:row.points_per_visit,rewardThreshold:row.reward_threshold,rewardText:row.reward_text},200,origin);
+      const result=await rpc("owner_scan_v2",{p_actor:actor,p_scan_token_hash:await sha256(scanToken)}); const row=result[0];
+      return json({scanEventId:row.scan_event_id,customerId:row.customer_id,displayName:row.display_name,activity:{slug:row.activity_slug,name:row.activity_name,settingsVersion:row.activity_settings_version},points:row.points,rewardsAvailable:row.rewards_available,scanCount:Number(row.scan_count),previousScanAt:row.previous_scan_at,pointsPerVisit:row.points_per_visit,rewardThreshold:row.reward_threshold,rewardText:row.reward_text,rewardTextAr:row.reward_text_ar},200,origin);
     }
     if (action === "owner-add-visit-point") {
       const result=await rpc("owner_add_visit_point",{p_actor:actor,p_scan_event_id:validUuid(body.scanEventId),p_idempotency_key:validUuid(body.idempotencyKey)}); const row=result[0];

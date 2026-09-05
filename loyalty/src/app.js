@@ -1,5 +1,6 @@
-import { normalizePhone, validatePin, escapeHtml, formatDubaiTime, randomIdempotencyKey, parseQrPayload } from "./core.js";
+import { normalizePhone, validatePin, escapeHtml, randomIdempotencyKey, parseQrPayload } from "./core.js";
 import { callApi, ownerLogin, isConfigured } from "./api.js";
+import { applyDocumentLanguage, getLanguage, setLanguage, t, activityName, activityLine, countLabel, eventActionLabel, formatDubaiDateTime, localizeError } from "./i18n.js";
 
 const config = window.LOYALTY_CONFIG;
 const app = document.querySelector("#app");
@@ -8,12 +9,12 @@ const customerKey = "x_loyalty_customer_session";
 const qrKey = "x_loyalty_qr_credential";
 const lastActivityKey = "x_loyalty_last_activity";
 const activities = Object.freeze([
-  { slug: "laser-tag", name: "Laser Tag", icon: "assets/activity-icons/laser-tag.svg", line: "Aim. Tag. Score.", venueSlug: "x-entertainment" },
-  { slug: "bowling", name: "Bowling", icon: "assets/activity-icons/bowling.svg", line: "Roll toward rewards.", venueSlug: "master-bowling" },
-  { slug: "escape-room", name: "Escape Room", icon: "assets/activity-icons/escape-room.svg", line: "Solve it together.", venueSlug: "x-entertainment" },
-  { slug: "billiard", name: "Billiard", icon: "assets/activity-icons/billiard.svg", line: "Every frame counts.", venueSlug: "expert-billiards" },
-  { slug: "gaming", name: "PC & PlayStation", icon: "assets/activity-icons/gaming.svg", line: "Level up every session.", venueSlug: "x-entertainment" },
-  { slug: "others", name: "Others", icon: "assets/activity-icons/others.svg", line: "More ways to play.", venueSlug: "x-entertainment" }
+  { slug: "laser-tag", icon: "assets/activity-icons/laser-tag.svg", venueSlug: "x-entertainment" },
+  { slug: "bowling", icon: "assets/activity-icons/bowling.svg", venueSlug: "master-bowling" },
+  { slug: "escape-room", icon: "assets/activity-icons/escape-room.svg", venueSlug: "x-entertainment" },
+  { slug: "billiard", icon: "assets/activity-icons/billiard.svg", venueSlug: "expert-billiards" },
+  { slug: "gaming", icon: "assets/activity-icons/gaming.svg", venueSlug: "x-entertainment" },
+  { slug: "others", icon: "assets/activity-icons/others.svg", venueSlug: "x-entertainment" }
 ]);
 const bookingVenues = Object.freeze(Array.isArray(config.bookingVenues) ? config.bookingVenues : []);
 
@@ -27,7 +28,19 @@ let pendingScanToken = "";
 
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
-document.title = `${config.business.groupName || config.business.shortName} Activity Passport`;
+function applyLanguageShell() {
+  applyDocumentLanguage();
+  document.querySelectorAll("[data-i18n]").forEach(element => { element.textContent = t(element.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(element => { element.setAttribute("aria-label", t(element.dataset.i18nAria)); });
+  const toggle = document.querySelector("#language-toggle");
+  if (toggle) {
+    toggle.setAttribute("aria-label", t("language.switch"));
+    toggle.title = t("language.switch");
+    toggle.querySelector("[data-language-label]").textContent = t("language.label");
+  }
+}
+
+applyLanguageShell();
 document.querySelectorAll("[data-business-name]").forEach(element => { element.textContent = config.business.name; });
 const addressElement = document.querySelector("[data-business-address]");
 if (addressElement) addressElement.textContent = config.business.address;
@@ -39,6 +52,13 @@ if (phoneElement) {
 
 window.addEventListener("beforeinstallprompt", event => { event.preventDefault(); installPrompt = event; });
 window.addEventListener("hashchange", render);
+document.querySelector("#language-toggle")?.addEventListener("click", event => {
+  setLanguage(getLanguage() === "ar" ? "en" : "ar");
+  applyLanguageShell();
+  render();
+  window.requestAnimationFrame(() => event.currentTarget.focus());
+  showToast(t("language.changed"));
+});
 document.querySelector(".skip-link")?.addEventListener("click", event => {
   event.preventDefault();
   app.focus({ preventScroll: true });
@@ -58,8 +78,16 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register(workerUrl).catch(() => {});
 }
 
-function activityMeta(slug) { return activities.find(activity => activity.slug === slug) || activities[0]; }
+function activityMeta(slug) {
+  const activity = activities.find(item => item.slug === slug) || activities[0];
+  return { ...activity, name: activityName(activity.slug), line: activityLine(activity.slug) };
+}
+function allActivities() { return activities.map(activity => activityMeta(activity.slug)); }
 function bookingVenue(slug) { return bookingVenues.find(venue => venue.slug === slug) || null; }
+function venueText(venue, field) {
+  const localized = getLanguage() === "ar" ? venue?.[`${field}Ar`] : venue?.[field];
+  return String(localized || venue?.[field] || "");
+}
 function venueMapUrl(venue) {
   try {
     const url = new URL(String(venue?.mapUrl || ""));
@@ -70,24 +98,25 @@ function whatsappUrl(venue, activityName = "") {
   const digits = String(venue?.whatsapp || "");
   if (!/^9715\d{8}$/.test(digits)) return "";
   const url = new URL(`https://wa.me/${digits}`);
+  const venueName = venueText(venue, "name");
   const message = activityName
-    ? `I want to book ${activityName} at ${venue.name}. Please share the available times.`
-    : `I want to book an experience at ${venue.name}. Please share the available times.`;
+    ? t("booking.message.activity", { activity: activityName, venue: venueName })
+    : t("booking.message.generic", { venue: venueName });
   url.searchParams.set("text", message);
   return url.toString();
 }
 function bookingLink(venue, label, activityName = "", className = "button whatsapp") {
   const href = whatsappUrl(venue, activityName);
   if (!href) return "";
-  const accessible = `${label} on WhatsApp (opens in a new tab)`;
+  const accessible = t("booking.whatsappAria", { label });
   return `<a class="${escapeHtml(className)}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(accessible)}"><span class="chat-mark" aria-hidden="true">↗</span>${escapeHtml(label)}</a>`;
 }
 function safeNumber(value) { const number = Number(value); return Number.isFinite(number) ? number : 0; }
 function eventChange(event) {
   const rewardDelta = safeNumber(event.rewardDelta);
-  if (rewardDelta) return `${rewardDelta > 0 ? "+" : ""}${rewardDelta} reward`;
+  if (rewardDelta) return `${rewardDelta > 0 ? "+" : "−"}${countLabel(Math.abs(rewardDelta), "reward")}`;
   const pointDelta = safeNumber(event.pointDelta);
-  return pointDelta ? `${pointDelta > 0 ? "+" : ""}${pointDelta} point${Math.abs(pointDelta) === 1 ? "" : "s"}` : "—";
+  return pointDelta ? `${pointDelta > 0 ? "+" : "−"}${countLabel(Math.abs(pointDelta), "point")}` : "—";
 }
 function showToast(message) {
   toast.textContent = message;
@@ -105,55 +134,59 @@ function settleViewPosition() {
   });
 }
 function configurationNotice() {
-  return isConfigured() ? "" : `<div class="notice">Design preview only. Add the Supabase project URL and public publishable key in <strong>config.js</strong> to activate secure membership and scanning.</div>`;
+  return isConfigured() ? "" : `<div class="notice">${escapeHtml(t("configuration.preview"))}</div>`;
 }
 
 function homeView() {
   const stamps = Array.from({ length: 10 }, (_, index) => `<span class="stamp ${index < 4 ? "earned" : ""}">${index < 4 ? "X" : index + 1}</span>`).join("");
-  const activityTiles = activities.map(activity => `<article class="activity-tile"><img src="${activity.icon}" alt="" width="52" height="52" /><strong>${activity.name}</strong><span>${activity.line}</span></article>`).join("");
+  const activityTiles = allActivities().map(activity => `<article class="activity-tile"><img src="${activity.icon}" alt="" width="52" height="52" /><strong>${escapeHtml(activity.name)}</strong><span>${escapeHtml(activity.line)}</span></article>`).join("");
   return `<section class="hero">
-    <div class="hero-copy"><p class="eyebrow">X Group · Activity Passport</p><h1>Play. Score.<span class="headline-accent">Repeat.</span></h1><p class="lead">One passport for six ways to play. Earn a separate balance for Laser Tag, Bowling, Escape Room, Billiard, PC & PlayStation, and more.</p><div class="actions"><button class="button primary" data-route="join">Get my passport</button><button class="button secondary" data-route="passport">Open my passport</button><button class="button secondary" data-route="book">Book an experience</button></div><div class="hero-meta"><span class="meta-chip">Installs on your home screen</span><span class="meta-chip">No native wallet required</span><span class="meta-chip">Private one-time scan codes</span></div></div>
-    <div class="wallet-preview" aria-label="Laser Tag loyalty passport preview"><div class="preview-orbit" aria-hidden="true"></div><div class="passport-stack"><div class="passport-shadow-card" aria-hidden="true"></div><article class="passport-card"><div class="passport-top"><img class="passport-logo" src="assets/x-group-logo.jpg" alt="X Group" width="100" height="102" /><span class="location-chip">RAK Mall</span></div><div class="passport-body"><span class="passport-label">Activity passport</span><h3>Laser Tag</h3><div class="passport-points"><strong>4</strong><span>of 10 points</span></div></div><div class="stamp-grid" aria-label="Four of ten example stamps earned">${stamps}</div><div class="passport-foot"><span>Member · X-7A4C-9F2E-D681-3B05</span><span>Your play, rewarded.</span></div></article></div></div>
-  </section><section class="activity-showcase"><div class="section-intro"><p class="eyebrow">Six ways to earn</p><h2>Your score lives with the activity.</h2><p>Each activity has its own points, reward target and scan history—so a Bowling visit never becomes a Laser Tag stamp.</p></div><div class="activity-grid">${activityTiles}</div></section>`;
+    <div class="hero-copy"><p class="eyebrow">${escapeHtml(t("home.eyebrow"))}</p><h1>${escapeHtml(t("home.play"))} ${escapeHtml(t("home.score"))}<span class="headline-accent">${escapeHtml(t("home.repeat"))}</span></h1><p class="lead">${escapeHtml(t("home.lead"))}</p><div class="actions"><button class="button primary" data-route="join">${escapeHtml(t("home.getPassport"))}</button><button class="button secondary" data-route="passport">${escapeHtml(t("home.openPassport"))}</button><button class="button secondary" data-route="book">${escapeHtml(t("home.book"))}</button></div><div class="hero-meta"><span class="meta-chip">${escapeHtml(t("home.install"))}</span><span class="meta-chip">${escapeHtml(t("home.noWallet"))}</span><span class="meta-chip">${escapeHtml(t("home.privateCodes"))}</span></div></div>
+    <div class="wallet-preview" aria-label="${escapeHtml(t("home.previewAria"))}"><div class="preview-orbit" aria-hidden="true"></div><div class="passport-stack"><div class="passport-shadow-card" aria-hidden="true"></div><article class="passport-card"><div class="passport-top"><img class="passport-logo" src="assets/x-group-logo.jpg" alt="X Group" width="100" height="102" /><span class="location-chip">${escapeHtml(t("home.mall"))}</span></div><div class="passport-body"><span class="passport-label">${escapeHtml(t("home.passportLabel"))}</span><h3>${escapeHtml(activityName("laser-tag"))}</h3><div class="passport-points"><strong>4</strong><span>${escapeHtml(t("home.previewPoints"))}</span></div></div><div class="stamp-grid" aria-label="${escapeHtml(t("home.stampsAria"))}">${stamps}</div><div class="passport-foot"><bdi dir="ltr">${escapeHtml(t("home.member"))}</bdi><span>${escapeHtml(t("home.tagline"))}</span></div></article></div></div>
+  </section><section class="activity-showcase"><div class="section-intro"><p class="eyebrow">${escapeHtml(t("home.sixWays"))}</p><h2>${escapeHtml(t("home.scoreByActivity"))}</h2><p>${escapeHtml(t("home.activityBody"))}</p></div><div class="activity-grid">${activityTiles}</div></section>`;
 }
 
 function bookingView() {
   const venueCards = bookingVenues.map((venue, index) => {
     const callNumber = String(venue.phone || "").replace(/[^+\d]/g, "");
     const mapUrl = venueMapUrl(venue);
-    const activitiesLabel = Array.isArray(venue.activities) ? venue.activities.join(" · ") : "";
-    const mapLink = mapUrl ? `<a class="venue-map" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Directions to ${escapeHtml(venue.name)} in Google Maps">Directions</a>` : "";
+    const venueName = venueText(venue, "name");
+    const venueCity = venueText(venue, "city") || t("common.uae");
+    const venueAddress = venueText(venue, "address");
+    const localizedActivities = getLanguage() === "ar" ? venue.activitiesAr : venue.activities;
+    const activitiesLabel = Array.isArray(localizedActivities) ? localizedActivities.join(" · ") : "";
+    const mapLink = mapUrl ? `<a class="venue-map" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(t("booking.mapAria", { venue: venueName }))}">${escapeHtml(t("common.directions"))}</a>` : "";
     return `<article class="venue-card" role="listitem">
       <img class="venue-visual" src="${escapeHtml(venue.image)}" alt="" width="1200" height="800" loading="${index === 0 ? "eager" : "lazy"}" decoding="async" />
-      <div class="venue-body"><span class="venue-city">${escapeHtml(venue.city || "UAE")}</span><h2>${escapeHtml(venue.name)}</h2><a class="venue-location" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${escapeHtml(venue.name)} in Google Maps"><span aria-hidden="true">⌖</span>${escapeHtml(venue.address)}</a><p class="venue-activities">${escapeHtml(activitiesLabel)}</p><a class="venue-phone" href="tel:${escapeHtml(callNumber)}" aria-label="Call ${escapeHtml(venue.name)}">${escapeHtml(venue.phone)}</a><div class="venue-actions">${bookingLink(venue, "WhatsApp", "", "venue-whatsapp")}${mapLink}</div></div>
+      <div class="venue-body"><span class="venue-city">${escapeHtml(venueCity)}</span><h2>${escapeHtml(venueName)}</h2><a class="venue-location" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(t("booking.mapAria", { venue: venueName }))}"><span aria-hidden="true">⌖</span>${escapeHtml(venueAddress)}</a><p class="venue-activities">${escapeHtml(activitiesLabel)}</p><a class="venue-phone" href="tel:${escapeHtml(callNumber)}" aria-label="${escapeHtml(t("booking.callAria", { venue: venueName }))}"><bdi dir="ltr">${escapeHtml(venue.phone)}</bdi></a><div class="venue-actions">${bookingLink(venue, t("common.whatsapp"), "", "venue-whatsapp")}${mapLink}</div></div>
     </article>`;
   }).join("");
-  return `<section class="shell booking-shell" aria-labelledby="booking-title"><div class="booking-panel"><div class="booking-head"><div><p class="eyebrow">X Group venues</p><h1 id="booking-title">Choose a venue.</h1></div><p>Book directly on WhatsApp or open the exact shop in Google Maps.</p></div><div class="venue-grid" role="list" aria-label="X Group venues">${venueCards}</div><p class="venue-scroll-hint">Swipe to see all three venues</p></div></section>`;
+  return `<section class="shell booking-shell" aria-labelledby="booking-title"><div class="booking-panel"><div class="booking-head"><div><p class="eyebrow">${escapeHtml(t("booking.eyebrow"))}</p><h1 id="booking-title">${escapeHtml(t("booking.title"))}</h1></div><p>${escapeHtml(t("booking.body"))}</p></div><div class="venue-grid" role="list" aria-label="${escapeHtml(t("booking.listAria"))}">${venueCards}</div><p class="venue-scroll-hint">${escapeHtml(t("booking.scrollHint"))}</p></div></section>`;
 }
 
 function joinView() {
-  return `<section class="shell narrow"><div class="panel">${configurationNotice()}<div class="panel-head"><div><p class="eyebrow">New player</p><h2>Create your X Passport.</h2><p class="subtle">Enter your details and choose a six-digit PIN. Your unique member code is created automatically.</p></div></div><form id="join-form" class="form-grid">
-    <div class="field"><label for="join-name">First name</label><input id="join-name" name="name" autocomplete="given-name" maxlength="60" required /></div>
-    <div class="field"><label for="join-phone">UAE mobile number</label><input id="join-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05X XXX XXXX" required /><span class="hint">Used to reopen your passport. It is never shown inside your QR code.</span></div>
-    <div class="field"><label for="join-pin">Choose a 6-digit PIN</label><input id="join-pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="6" required /></div>
-    <div class="field"><label for="join-pin-confirm">Confirm PIN</label><input id="join-pin-confirm" name="pinConfirm" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="6" required /></div>
-    <label class="check-row"><input name="consent" type="checkbox" required /><span>I agree that ${escapeHtml(config.business.name)} may store my phone number and activity visit history to operate this loyalty program.</span></label><p class="form-error" id="join-error" role="alert"></p><button class="button primary" type="submit">Create my passport</button>
+  return `<section class="shell narrow"><div class="panel">${configurationNotice()}<div class="panel-head"><div><p class="eyebrow">${escapeHtml(t("join.eyebrow"))}</p><h2>${escapeHtml(t("join.title"))}</h2><p class="subtle">${escapeHtml(t("join.body"))}</p></div></div><form id="join-form" class="form-grid">
+    <div class="field"><label for="join-name">${escapeHtml(t("join.firstName"))}</label><input id="join-name" name="name" autocomplete="given-name" maxlength="60" required /></div>
+    <div class="field"><label for="join-phone">${escapeHtml(t("join.phone"))}</label><input id="join-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05X XXX XXXX" required /><span class="hint">${escapeHtml(t("join.phoneHint"))}</span></div>
+    <div class="field"><label for="join-pin">${escapeHtml(t("join.pin"))}</label><input id="join-pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="6" required /></div>
+    <div class="field"><label for="join-pin-confirm">${escapeHtml(t("join.confirmPin"))}</label><input id="join-pin-confirm" name="pinConfirm" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="6" required /></div>
+    <label class="check-row"><input name="consent" type="checkbox" required /><span>${escapeHtml(t("join.consent", { business: config.business.name }))}</span></label><p class="form-error" id="join-error" role="alert"></p><button class="button primary" type="submit">${escapeHtml(t("join.submit"))}</button>
   </form></div></section>`;
 }
 
 function loginView() {
-  return `<section class="shell entry-shell"><div class="entry-grid"><div class="panel login-panel">${configurationNotice()}<div class="entry-brand"><img src="assets/x-group-logo.jpg" alt="" width="100" height="102" /><div><p class="eyebrow">X Group Activity Passport</p><span>RAK · Sharjah</span></div></div><h1>Open your passport.</h1><p class="subtle">Your activity points and one-time loyalty QR are one quick sign-in away.</p><form id="customer-login" class="form-grid"><div class="field"><label for="login-phone">Mobile number</label><input id="login-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05X XXX XXXX" required /></div><div class="field"><label for="login-pin">6-digit PIN</label><input id="login-pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6" required /></div><p class="form-error" id="login-error" role="alert"></p><button class="button primary" type="submit">Open my passport</button></form><p class="hint">New here? <button class="inline-link" data-route="join">Create a passport</button> · Forgot your PIN? <button class="inline-link" data-route="recover">Reset PIN</button></p></div><aside class="entry-visual"><img src="assets/venue-x-entertainment.jpg" alt="" width="1200" height="800" /><div class="entry-visual-copy"><p class="eyebrow">Ready to play?</p><h2>Book in seconds.</h2><p>WhatsApp, phone and directions for every venue.</p><button class="button booking-light" data-route="book">Choose a venue</button></div></aside></div></section>`;
+  return `<section class="shell entry-shell"><div class="entry-grid"><div class="panel login-panel">${configurationNotice()}<div class="entry-brand"><img src="assets/x-group-logo.jpg" alt="" width="100" height="102" /><div><p class="eyebrow">${escapeHtml(t("login.eyebrow"))}</p><span>${escapeHtml(t("login.region"))}</span></div></div><h1>${escapeHtml(t("login.title"))}</h1><p class="subtle">${escapeHtml(t("login.body"))}</p><form id="customer-login" class="form-grid"><div class="field"><label for="login-phone">${escapeHtml(t("login.phone"))}</label><input id="login-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05X XXX XXXX" required /></div><div class="field"><label for="login-pin">${escapeHtml(t("login.pin"))}</label><input id="login-pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6" required /></div><p class="form-error" id="login-error" role="alert"></p><button class="button primary" type="submit">${escapeHtml(t("login.submit"))}</button></form><p class="hint">${escapeHtml(t("login.new"))} <button class="inline-link" data-route="join">${escapeHtml(t("login.create"))}</button> · ${escapeHtml(t("login.forgot"))} <button class="inline-link" data-route="recover">${escapeHtml(t("login.reset"))}</button></p></div><aside class="entry-visual"><img src="assets/venue-x-entertainment.jpg" alt="" width="1200" height="800" /><div class="entry-visual-copy"><p class="eyebrow">${escapeHtml(t("login.ready"))}</p><h2>${escapeHtml(t("login.bookTitle"))}</h2><p>${escapeHtml(t("login.bookBody"))}</p><button class="button booking-light" data-route="book">${escapeHtml(t("login.chooseVenue"))}</button></div></aside></div></section>`;
 }
 
 function recoverView(prefill = "") {
-  return `<section class="shell narrow"><div class="panel">${configurationNotice()}<p class="eyebrow">PIN recovery</p><h2>Choose a new PIN.</h2><p class="subtle">First ask a team member to verify you and create a one-time reset code. The team never sees the new PIN you choose here.</p><form id="recover-form" class="form-grid">
-    <div class="field"><label for="recover-phone">Mobile number</label><input id="recover-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required /></div><div class="field"><label for="recover-code">One-time reset code</label><input id="recover-code" name="resetCode" value="${escapeHtml(prefill)}" autocomplete="off" autocapitalize="off" spellcheck="false" required /></div><div class="field"><label for="recover-pin">New 6-digit PIN</label><input id="recover-pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="6" required /></div><div class="field"><label for="recover-pin-confirm">Confirm new PIN</label><input id="recover-pin-confirm" name="pinConfirm" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="6" required /></div><p class="form-error" id="recover-error" role="alert"></p><button class="button primary" type="submit">Replace my PIN</button><button class="button secondary" type="button" data-route="login">Back to sign in</button>
+  return `<section class="shell narrow"><div class="panel">${configurationNotice()}<p class="eyebrow">${escapeHtml(t("recover.eyebrow"))}</p><h2>${escapeHtml(t("recover.title"))}</h2><p class="subtle">${escapeHtml(t("recover.body"))}</p><form id="recover-form" class="form-grid">
+    <div class="field"><label for="recover-phone">${escapeHtml(t("recover.phone"))}</label><input id="recover-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required /></div><div class="field"><label for="recover-code">${escapeHtml(t("recover.code"))}</label><input id="recover-code" class="ltr-input" name="resetCode" value="${escapeHtml(prefill)}" autocomplete="off" autocapitalize="off" spellcheck="false" required /></div><div class="field"><label for="recover-pin">${escapeHtml(t("recover.newPin"))}</label><input id="recover-pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="6" required /></div><div class="field"><label for="recover-pin-confirm">${escapeHtml(t("recover.confirmPin"))}</label><input id="recover-pin-confirm" name="pinConfirm" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="6" required /></div><p class="form-error" id="recover-error" role="alert"></p><button class="button primary" type="submit">${escapeHtml(t("recover.submit"))}</button><button class="button secondary" type="button" data-route="login">${escapeHtml(t("recover.back"))}</button>
   </form></div></section>`;
 }
 
 function renderActivityRail(selectedSlug, balances) {
   const available = new Map((Array.isArray(balances) ? balances : []).map(balance => [balance.slug, balance]));
-  return `<div class="activity-rail" aria-label="Choose loyalty activity">${activities.map(activity => { const points = safeNumber(available.get(activity.slug)?.points); return `<button class="activity-choice" data-activity="${activity.slug}" aria-pressed="${activity.slug === selectedSlug}"><img src="${activity.icon}" alt="" width="42" height="42" /><span>${activity.name}</span><span>${points} pt${points === 1 ? "" : "s"}</span></button>`; }).join("")}</div>`;
+  return `<div class="activity-rail" aria-label="${escapeHtml(t("member.railAria"))}">${allActivities().map(activity => { const points = safeNumber(available.get(activity.slug)?.points); return `<button class="activity-choice" data-activity="${activity.slug}" aria-pressed="${activity.slug === selectedSlug}"><img src="${activity.icon}" alt="" width="42" height="42" /><span>${escapeHtml(activity.name)}</span><span>${escapeHtml(countLabel(points, "point"))}</span></button>`; }).join("")}</div>`;
 }
 
 async function memberView(selectedSlug = activities[0].slug, generation = renderGeneration) {
@@ -161,7 +194,7 @@ async function memberView(selectedSlug = activities[0].slug, generation = render
   const qrToken = localStorage.getItem(qrKey);
   if (!sessionToken || !qrToken) { location.hash = "#/login"; return; }
   const activity = activityMeta(selectedSlug);
-  app.innerHTML = `<div class="loading">Opening your ${escapeHtml(activity.name)} passport…</div>`;
+  app.innerHTML = `<div class="loading">${escapeHtml(t("member.loading", { activity: activity.name }))}</div>`;
   settleViewPosition();
   try {
     const data = await callApi("member-summary", { sessionToken, qrToken, activitySlug: activity.slug });
@@ -171,9 +204,12 @@ async function memberView(selectedSlug = activities[0].slug, generation = render
     const threshold = Math.max(1, safeNumber(data.rewardThreshold));
     const progressValue = Math.min(threshold, points % threshold || (points > 0 ? threshold : 0));
     const venue = bookingVenue(selected.venueSlug);
-    app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">X Group Activity Passport</p><h2>Welcome, ${escapeHtml(data.displayName)}.</h2><p class="subtle">Member number ${escapeHtml(data.memberCode)}</p></div><button id="customer-logout" class="button ghost">Sign out</button></div>${renderActivityRail(selected.slug, data.activityBalances)}<div class="member-grid">
-      <article class="panel member-card"><div class="member-card-head"><div class="member-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><span>Selected activity</span><strong>${escapeHtml(data.selectedActivity?.name || selected.name)}</strong></div></div><span class="location-chip">${escapeHtml(venue?.name || config.business.branch)}</span></div><div class="points"><strong>${points}</strong><span>activity points</span></div><progress value="${progressValue}" max="${threshold}" aria-label="${progressValue} of ${threshold} points toward the next reward"></progress><div class="reward-row"><span>${progressValue} / ${threshold} to next reward</span><span>${safeNumber(data.rewardsAvailable)} available</span></div><p>${escapeHtml(data.rewardText)}</p><p class="subtle">Last ${escapeHtml(selected.name)} visit: ${escapeHtml(formatDubaiTime(data.lastScannedAt))}</p>${bookingLink(venue, `Book ${selected.name}`, selected.name)}</article>
-      <article class="panel qr-panel"><div><p class="eyebrow">One-time play code</p><h3>Show this to the team.</h3></div><div class="qr-wrap">${data.qrSvg || ""}</div><div class="qr-meta"><span>For ${escapeHtml(selected.name)}</span><span>Expires ${escapeHtml(formatDubaiTime(data.scanTokenExpiresAt))}</span></div><p class="hint">This code is activity-specific, expires after five minutes and can be accepted only once. Refresh it if the team asks for a new code.</p><div class="actions"><button id="refresh-code" class="button secondary">Refresh code</button><button id="install-button" class="button ghost">Add to home screen</button></div></article>
+    const rewardsAvailable = safeNumber(data.rewardsAvailable);
+    const rewardText = getLanguage() === "ar" ? (data.rewardTextAr || data.rewardText) : data.rewardText;
+    const redemptionAction = rewardsAvailable > 0 ? `<div class="redeem-customer"><button id="request-redeem" class="button reward-button" type="button">${escapeHtml(t("member.redeem"))}</button><span>${escapeHtml(t("member.redeemHint"))}</span></div>` : "";
+    app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">${escapeHtml(t("login.eyebrow"))}</p><h2>${escapeHtml(t("member.welcome", { name: data.displayName }))}</h2><p class="subtle">${escapeHtml(t("member.number", { code: data.memberCode }))}</p></div><button id="customer-logout" class="button ghost">${escapeHtml(t("common.signOut"))}</button></div>${renderActivityRail(selected.slug, data.activityBalances)}<div class="member-grid">
+      <article class="panel member-card"><div class="member-card-head"><div class="member-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><span>${escapeHtml(t("member.selected"))}</span><strong>${escapeHtml(selected.name)}</strong></div></div><span class="location-chip">${escapeHtml(venueText(venue, "name") || config.business.branch)}</span></div><div class="points"><strong>${points}</strong><span>${escapeHtml(t("member.points"))}</span></div><progress value="${progressValue}" max="${threshold}" aria-label="${escapeHtml(t("member.progressAria", { current: progressValue, target: threshold }))}"></progress><div class="reward-row"><span>${escapeHtml(t("member.progress", { current: progressValue, target: threshold }))}</span><span>${escapeHtml(t("member.available", { count: rewardsAvailable }))}</span></div><p>${escapeHtml(rewardText)}</p>${redemptionAction}<p class="subtle">${escapeHtml(t("member.lastVisit", { activity: selected.name, date: formatDubaiDateTime(data.lastScannedAt) }))}</p>${bookingLink(venue, t("member.book", { activity: selected.name }), selected.name)}</article>
+      <article id="member-qr-panel" class="panel qr-panel"><div><p class="eyebrow">${escapeHtml(t("member.qrEyebrow"))}</p><h3 id="member-qr-title">${escapeHtml(t("member.qrTitle"))}</h3></div><div class="qr-wrap">${data.qrSvg || ""}</div><div class="qr-meta"><span>${escapeHtml(t("member.forActivity", { activity: selected.name }))}</span><span>${escapeHtml(t("member.expires", { date: formatDubaiDateTime(data.scanTokenExpiresAt) }))}</span></div><p class="hint">${escapeHtml(t("member.qrHint"))}</p><div class="actions"><button id="refresh-code" class="button secondary">${escapeHtml(t("member.refresh"))}</button><button id="install-button" class="button ghost">${escapeHtml(t("member.install"))}</button></div></article>
     </div></section>`;
     document.querySelectorAll("[data-activity]").forEach(button => button.addEventListener("click", () => { localStorage.setItem(lastActivityKey, button.dataset.activity); location.hash = `#/member/${button.dataset.activity}`; }));
     settleViewPosition();
@@ -183,49 +219,57 @@ async function memberView(selectedSlug = activities[0].slug, generation = render
       memberView(selected.slug, nextGeneration);
     });
     document.querySelector("#install-button")?.addEventListener("click", installApp);
+    document.querySelector("#request-redeem")?.addEventListener("click", () => {
+      const qrPanel = document.querySelector("#member-qr-panel");
+      qrPanel?.classList.add("redeem-ready");
+      const qrTitle = document.querySelector("#member-qr-title");
+      if (qrTitle) qrTitle.textContent = t("member.qrRedeemTitle");
+      qrPanel?.scrollIntoView({ behavior: "smooth", block: "center" });
+      showToast(t("member.redeemReady"));
+    });
     document.querySelector("#customer-logout")?.addEventListener("click", () => { localStorage.removeItem(customerKey); localStorage.removeItem(qrKey); localStorage.removeItem(lastActivityKey); location.hash = "#/passport"; });
   } catch (error) {
     if (generation !== renderGeneration) return;
     const expired = /session|sign in|replaced/i.test(error.message);
     if (expired) { localStorage.removeItem(customerKey); localStorage.removeItem(qrKey); }
-    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Passport unavailable</p><h2>We could not open this card.</h2><p>${escapeHtml(error.message)}</p><div class="actions"><button class="button primary" data-route="${expired ? "passport" : `member/${activity.slug}`}">${expired ? "Sign in again" : "Try again"}</button><button class="button secondary" data-route="book">Book an experience</button></div></div></section>`;
+    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">${escapeHtml(t("member.unavailable"))}</p><h2>${escapeHtml(t("member.cannotOpen"))}</h2><p>${escapeHtml(localizeError(error))}</p><div class="actions"><button class="button primary" data-route="${expired ? "passport" : `member/${activity.slug}`}">${escapeHtml(expired ? t("member.signInAgain") : t("common.retry"))}</button><button class="button secondary" data-route="book">${escapeHtml(t("home.book"))}</button></div></div></section>`;
     settleViewPosition();
   }
 }
 
 function ownerView() {
   if (ownerAccessToken) { location.hash = "#/dashboard"; return ""; }
-  return `<section class="shell narrow"><div class="panel admin-panel">${configurationNotice()}<span class="admin-lock" aria-hidden="true">●</span><p class="eyebrow">X Group Admin</p><h2>Secure staff access.</h2><p class="subtle">The dashboard, scanner and point controls require an active admin email and password.</p><form id="owner-login" class="form-grid"><div class="field"><label for="owner-email">Admin email</label><input id="owner-email" name="email" type="email" autocomplete="username" required /></div><div class="field"><label for="owner-password">Password</label><input id="owner-password" name="password" type="password" autocomplete="current-password" required /></div><p class="form-error" id="owner-error" role="alert"></p><button class="button primary" type="submit">Open admin dashboard</button></form></div></section>`;
+  return `<section class="shell narrow"><div class="panel admin-panel" data-watermark="${getLanguage() === "ar" ? "إدارة" : "ADMIN"}">${configurationNotice()}<span class="admin-lock" aria-hidden="true">●</span><p class="eyebrow">${escapeHtml(t("owner.eyebrow"))}</p><h2>${escapeHtml(t("owner.title"))}</h2><p class="subtle">${escapeHtml(t("owner.body"))}</p><form id="owner-login" class="form-grid"><div class="field"><label for="owner-email">${escapeHtml(t("owner.email"))}</label><input id="owner-email" name="email" type="email" autocomplete="username" required /></div><div class="field"><label for="owner-password">${escapeHtml(t("owner.password"))}</label><input id="owner-password" name="password" type="password" autocomplete="current-password" required /></div><p class="form-error" id="owner-error" role="alert"></p><button class="button primary" type="submit">${escapeHtml(t("owner.submit"))}</button></form></div></section>`;
 }
 
 function activityBadges(balances) {
   if (!Array.isArray(balances)) return "";
-  return `<div class="activity-badges">${balances.map(balance => `<span class="activity-badge" title="${escapeHtml(balance.name)}">${escapeHtml(activityMeta(balance.slug).name.replace("PlayStation", "PS"))} ${safeNumber(balance.points)}</span>`).join("")}</div>`;
+  return `<div class="activity-badges">${balances.map(balance => `<span class="activity-badge" title="${escapeHtml(activityName(balance.slug))}">${escapeHtml(activityName(balance.slug, true))} <bdi dir="ltr">${safeNumber(balance.points)}</bdi></span>`).join("")}</div>`;
 }
 function ownerActivityCards(items) {
   const list = Array.isArray(items) ? items : [];
-  return `<div class="activity-grid dashboard-activities">${list.map(item => { const meta = activityMeta(item.slug); return `<article class="activity-tile"><img src="${meta.icon}" alt="" width="52" height="52" /><strong>${escapeHtml(item.name)}</strong><span>${safeNumber(item.scans)} scans · ${safeNumber(item.pointsAwarded)} points</span></article>`; }).join("")}</div>`;
+  return `<div class="activity-grid dashboard-activities">${list.map(item => { const meta = activityMeta(item.slug); return `<article class="activity-tile"><img src="${meta.icon}" alt="" width="52" height="52" /><strong>${escapeHtml(meta.name)}</strong><span>${escapeHtml(t("dashboard.activitySummary", { scans: countLabel(item.scans, "scan"), points: countLabel(item.pointsAwarded, "point") }))}</span></article>`; }).join("")}</div>`;
 }
 
 async function dashboardView(generation = renderGeneration, customerOffset = 0) {
   const ownerToken = ownerAccessToken;
   if (!ownerToken) { location.hash = "#/admin"; return; }
-  app.innerHTML = `<div class="loading">Loading the team dashboard…</div>`;
+  app.innerHTML = `<div class="loading">${escapeHtml(t("dashboard.loading"))}</div>`;
   settleViewPosition();
   try {
     const data = await callApi("owner-dashboard", { customerLimit: 250, customerOffset }, ownerToken);
     if (generation !== renderGeneration) return;
     const activitySettings = Array.isArray(data.metrics?.activityBreakdown) ? data.metrics.activityBreakdown : [];
-    const defaultSetting = activitySettings[0] || { slug: activities[0].slug, pointsPerVisit: 1, rewardThreshold: 10, rewardText: "10 visits unlock a reward" };
+    const defaultSetting = activitySettings[0] || { slug: activities[0].slug, pointsPerVisit: 1, rewardThreshold: 10, rewardText: "10 visits unlock a reward", rewardTextAr: "10 زيارات تمنح مكافأة" };
     const customerPage = data.customerPage || { total: (data.customers || []).length, limit: 250, offset: customerOffset, hasMore: false };
     const pageStart = (data.customers || []).length ? safeNumber(customerPage.offset) + 1 : 0;
     const pageEnd = Math.min(safeNumber(customerPage.total), safeNumber(customerPage.offset) + (data.customers || []).length);
-    app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">Team dashboard</p><h2>Play, verified.</h2><p class="subtle">Scans and confirmed points stay separate in the audit history.</p></div><div class="actions"><button class="button primary" data-route="scanner">Scan a passport</button><button id="owner-logout" class="button secondary">Sign out</button></div></div>
-      <div class="metric-grid"><div class="metric"><span>Active members</span><strong>${safeNumber(data.metrics?.customers)}</strong></div><div class="metric"><span>Accepted scans</span><strong>${safeNumber(data.metrics?.scans)}</strong></div><div class="metric"><span>Points awarded</span><strong>${safeNumber(data.metrics?.pointsAwarded)}</strong></div><div class="metric"><span>Scans today</span><strong>${safeNumber(data.metrics?.scansToday)}</strong></div></div>${ownerActivityCards(activitySettings)}
-      <div class="owner-tools"><article class="tool-card"><h3>Activity reward rules</h3><p>Each activity can award a different number of points and use a different reward target.</p><form id="activity-settings" class="compact-form"><div class="field"><label for="settings-activity">Activity</label><select id="settings-activity" name="activitySlug">${activitySettings.map(item => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</option>`).join("")}</select></div><div class="settings-row"><div class="field"><label for="points-per-visit">Points per visit</label><input id="points-per-visit" name="pointsPerVisit" type="number" min="1" max="20" value="${safeNumber(defaultSetting.pointsPerVisit)}" required /></div><div class="field"><label for="reward-threshold">Reward target</label><input id="reward-threshold" name="rewardThreshold" type="number" min="2" max="1000" value="${safeNumber(defaultSetting.rewardThreshold)}" required /></div></div><div class="field"><label for="reward-text">Reward message</label><input id="reward-text" name="rewardText" maxlength="200" value="${escapeHtml(defaultSetting.rewardText)}" required /></div><p class="form-error" id="settings-error" role="alert"></p><button class="button ghost" type="submit">Save activity rules</button></form></article></div>
-      <div id="reset-result" aria-live="polite"></div><div class="panel"><div class="panel-head"><div><h3>Members</h3><span class="subtle">Phone numbers are masked; use in-person verification before creating a reset code.</span></div><span class="hint">Showing ${pageStart}–${pageEnd} of ${safeNumber(customerPage.total)}</span></div><div class="table-wrap"><table><thead><tr><th>Member</th><th>Phone</th><th>Activity points</th><th>Scans</th><th>Last scan</th><th>Account</th></tr></thead><tbody>${(data.customers || []).map(customer => `<tr><td>${escapeHtml(customer.displayName)}<br><span class="hint">${escapeHtml(customer.memberCode)}</span></td><td>${escapeHtml(customer.maskedPhone)}</td><td>${activityBadges(customer.activityBalances)}</td><td>${safeNumber(customer.scanCount)}</td><td>${escapeHtml(formatDubaiTime(customer.lastScannedAt))}</td><td><button class="button ghost reset-pin" data-customer-id="${escapeHtml(customer.customerId)}">Reset PIN</button></td></tr>`).join("") || `<tr><td colspan="6" class="empty">No members yet.</td></tr>`}</tbody></table></div><div class="page-controls">${safeNumber(customerPage.offset) > 0 ? `<button class="button ghost" data-route="dashboard/${Math.max(0, safeNumber(customerPage.offset) - safeNumber(customerPage.limit))}">Previous members</button>` : ""}${customerPage.hasMore ? `<button class="button ghost" data-route="dashboard/${safeNumber(customerPage.offset) + safeNumber(customerPage.limit)}">Next members</button>` : ""}</div></div>
-      <div class="panel history-panel"><div class="panel-head"><div><h3>Scan, point and reward history</h3><span class="subtle">Up to 1,000 recent accepted events in Dubai time. The database retains the complete history.</span></div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Member</th><th>Activity</th><th>Event</th><th>Change</th><th>Balance</th></tr></thead><tbody>${(data.recentEvents || []).map(event => `<tr><td>${escapeHtml(formatDubaiTime(event.occurredAt))}</td><td>${escapeHtml(event.displayName)}<br><span class="hint">${escapeHtml(event.memberCode)}</span></td><td>${escapeHtml(event.activityName)}</td><td>${escapeHtml(String(event.action || "").replaceAll("_", " "))}</td><td>${escapeHtml(eventChange(event))}</td><td>${safeNumber(event.balanceBefore)} → ${safeNumber(event.balanceAfter)}</td></tr>`).join("") || `<tr><td colspan="6" class="empty">No activity yet.</td></tr>`}</tbody></table></div></div>
-    </section>`;
+    app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">${escapeHtml(t("dashboard.eyebrow"))}</p><h2>${escapeHtml(t("dashboard.title"))}</h2><p class="subtle">${escapeHtml(t("dashboard.body"))}</p></div><div class="actions"><button class="button primary" data-route="scanner">${escapeHtml(t("dashboard.scan"))}</button><button id="owner-logout" class="button secondary">${escapeHtml(t("common.signOut"))}</button></div></div>
+      <div class="metric-grid"><div class="metric"><span>${escapeHtml(t("dashboard.activeMembers"))}</span><strong>${safeNumber(data.metrics?.customers)}</strong></div><div class="metric"><span>${escapeHtml(t("dashboard.acceptedScans"))}</span><strong>${safeNumber(data.metrics?.scans)}</strong></div><div class="metric"><span>${escapeHtml(t("dashboard.pointsAwarded"))}</span><strong>${safeNumber(data.metrics?.pointsAwarded)}</strong></div><div class="metric"><span>${escapeHtml(t("dashboard.scansToday"))}</span><strong>${safeNumber(data.metrics?.scansToday)}</strong></div></div>${ownerActivityCards(activitySettings)}
+      <div class="owner-tools"><article class="tool-card"><h3>${escapeHtml(t("dashboard.rules"))}</h3><p>${escapeHtml(t("dashboard.rulesBody"))}</p><form id="activity-settings" class="compact-form"><div class="field"><label for="settings-activity">${escapeHtml(t("dashboard.activity"))}</label><select id="settings-activity" name="activitySlug">${activitySettings.map(item => `<option value="${escapeHtml(item.slug)}">${escapeHtml(activityName(item.slug))}</option>`).join("")}</select></div><div class="settings-row"><div class="field"><label for="points-per-visit">${escapeHtml(t("dashboard.pointsPerVisit"))}</label><input id="points-per-visit" name="pointsPerVisit" type="number" min="1" max="20" value="${safeNumber(defaultSetting.pointsPerVisit)}" required /></div><div class="field"><label for="reward-threshold">${escapeHtml(t("dashboard.rewardTarget"))}</label><input id="reward-threshold" name="rewardThreshold" type="number" min="2" max="1000" value="${safeNumber(defaultSetting.rewardThreshold)}" required /></div></div><div class="field"><label for="reward-text">${escapeHtml(t("dashboard.rewardTextEn"))}</label><input id="reward-text" class="ltr-input" name="rewardText" maxlength="200" value="${escapeHtml(defaultSetting.rewardText)}" required /></div><div class="field"><label for="reward-text-ar">${escapeHtml(t("dashboard.rewardTextAr"))}</label><input id="reward-text-ar" class="rtl-input" name="rewardTextAr" maxlength="200" value="${escapeHtml(defaultSetting.rewardTextAr || "")}" required /></div><p class="form-error" id="settings-error" role="alert"></p><button class="button ghost" type="submit">${escapeHtml(t("dashboard.saveRules"))}</button></form></article></div>
+      <div id="reset-result" aria-live="polite"></div><div class="panel"><div class="panel-head"><div><h3>${escapeHtml(t("dashboard.members"))}</h3><span class="subtle">${escapeHtml(t("dashboard.membersHint"))}</span></div><span class="hint">${escapeHtml(t("dashboard.showing", { start: pageStart, end: pageEnd, total: safeNumber(customerPage.total) }))}</span></div><div class="table-wrap"><table><thead><tr><th>${escapeHtml(t("dashboard.thMember"))}</th><th>${escapeHtml(t("dashboard.thPhone"))}</th><th>${escapeHtml(t("dashboard.thPoints"))}</th><th>${escapeHtml(t("dashboard.thScans"))}</th><th>${escapeHtml(t("dashboard.thLast"))}</th><th>${escapeHtml(t("dashboard.thAccount"))}</th></tr></thead><tbody>${(data.customers || []).map(customer => `<tr><td>${escapeHtml(customer.displayName)}<br><bdi class="hint" dir="ltr">${escapeHtml(customer.memberCode)}</bdi></td><td><bdi dir="ltr">${escapeHtml(customer.maskedPhone)}</bdi></td><td>${activityBadges(customer.activityBalances)}</td><td>${safeNumber(customer.scanCount)}</td><td>${escapeHtml(formatDubaiDateTime(customer.lastScannedAt))}</td><td><button class="button ghost reset-pin" data-customer-id="${escapeHtml(customer.customerId)}">${escapeHtml(t("dashboard.resetPin"))}</button></td></tr>`).join("") || `<tr><td colspan="6" class="empty">${escapeHtml(t("dashboard.noMembers"))}</td></tr>`}</tbody></table></div><div class="page-controls">${safeNumber(customerPage.offset) > 0 ? `<button class="button ghost" data-route="dashboard/${Math.max(0, safeNumber(customerPage.offset) - safeNumber(customerPage.limit))}">${escapeHtml(t("dashboard.previous"))}</button>` : ""}${customerPage.hasMore ? `<button class="button ghost" data-route="dashboard/${safeNumber(customerPage.offset) + safeNumber(customerPage.limit)}">${escapeHtml(t("dashboard.next"))}</button>` : ""}</div></div>
+      <div class="panel history-panel"><div class="panel-head"><div><h3>${escapeHtml(t("dashboard.history"))}</h3><span class="subtle">${escapeHtml(t("dashboard.historyHint"))}</span></div></div><div class="table-wrap"><table><thead><tr><th>${escapeHtml(t("dashboard.thTime"))}</th><th>${escapeHtml(t("dashboard.thMember"))}</th><th>${escapeHtml(t("dashboard.thActivity"))}</th><th>${escapeHtml(t("dashboard.thEvent"))}</th><th>${escapeHtml(t("dashboard.thChange"))}</th><th>${escapeHtml(t("dashboard.thBalance"))}</th></tr></thead><tbody>${(data.recentEvents || []).map(event => `<tr><td>${escapeHtml(formatDubaiDateTime(event.occurredAt))}</td><td>${escapeHtml(event.displayName)}<br><bdi class="hint" dir="ltr">${escapeHtml(event.memberCode)}</bdi></td><td>${escapeHtml(activityName(event.activitySlug))}</td><td>${escapeHtml(eventActionLabel(event.action))}</td><td>${escapeHtml(eventChange(event))}</td><td><bdi dir="ltr">${safeNumber(event.balanceBefore)} → ${safeNumber(event.balanceAfter)}</bdi></td></tr>`).join("") || `<tr><td colspan="6" class="empty">${escapeHtml(t("dashboard.noActivity"))}</td></tr>`}</tbody></table></div></div>
+      </section>`;
     settleViewPosition();
     document.querySelector("#owner-logout")?.addEventListener("click", () => { ownerAccessToken = null; location.hash = "#/"; });
     document.querySelectorAll(".reset-pin").forEach(button => button.addEventListener("click", () => createResetCode(button)));
@@ -234,11 +278,11 @@ async function dashboardView(generation = renderGeneration, customerOffset = 0) 
     if (generation !== renderGeneration) return;
     if (error.status === 401 || error.status === 403) {
       ownerAccessToken = null;
-      showToast("Your staff session expired. Sign in again.");
+      showToast(t("dashboard.sessionExpired"));
       location.hash = "#/admin";
       return;
     }
-    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Dashboard unavailable</p><h2>Your session is still saved.</h2><p>${escapeHtml(error.message)}</p><div class="actions"><button class="button primary" data-route="dashboard">Retry</button><button class="button secondary" data-route="passport">Customer passport</button></div></div></section>`;
+    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">${escapeHtml(t("dashboard.unavailable"))}</p><h2>${escapeHtml(t("dashboard.sessionSaved"))}</h2><p>${escapeHtml(localizeError(error))}</p><div class="actions"><button class="button primary" data-route="dashboard">${escapeHtml(t("common.retry"))}</button><button class="button secondary" data-route="passport">${escapeHtml(t("dashboard.customerPassport"))}</button></div></div></section>`;
     settleViewPosition();
   }
 }
@@ -249,19 +293,19 @@ async function createResetCode(button) {
   try {
     const data = await callApi("owner-create-pin-reset", { customerId: button.dataset.customerId, expiresInMinutes: 15 }, ownerAccessToken);
     const qr = data.resetQrSvg ? `<div class="code-qr">${data.resetQrSvg}</div>` : "";
-    result.innerHTML = `<div class="notice reset-notice"><strong>Reset code for ${escapeHtml(data.displayName)}</strong><div class="setup-code-grid">${qr}<div><span class="code-display compact">${escapeHtml(data.resetCode)}</span><span>Let this verified member scan the recovery QR, or give the code directly. It expires ${escapeHtml(formatDubaiTime(data.expiresAt))}.</span><button class="button ghost copy-code" data-code="${escapeHtml(data.resetCode)}">Copy reset code</button></div></div></div>`;
+    result.innerHTML = `<div class="notice reset-notice"><strong>${escapeHtml(t("reset.title", { name: data.displayName }))}</strong><div class="setup-code-grid">${qr}<div><bdi class="code-display compact" dir="ltr">${escapeHtml(data.resetCode)}</bdi><span>${escapeHtml(t("reset.instructions", { date: formatDubaiDateTime(data.expiresAt) }))}</span><button class="button ghost copy-code" data-code="${escapeHtml(data.resetCode)}">${escapeHtml(t("reset.copy"))}</button></div></div></div>`;
     result.querySelector(".copy-code")?.addEventListener("click", copyCode);
     result.scrollIntoView({ behavior: "smooth", block: "center" });
-  } catch (error) { result.innerHTML = `<div class="notice">${escapeHtml(error.message)}</div>`; }
+  } catch (error) { result.innerHTML = `<div class="notice">${escapeHtml(localizeError(error))}</div>`; }
   finally { button.disabled = false; }
 }
 
 async function copyCode(event) {
   try {
     await navigator.clipboard.writeText(event.currentTarget.dataset.code || "");
-    showToast("One-time code copied.");
+    showToast(t("reset.copied"));
   } catch {
-    showToast("Select and copy the displayed code manually.");
+    showToast(t("reset.copyManual"));
   }
 }
 
@@ -269,7 +313,7 @@ function bindActivitySettings(settings) {
   const form = document.querySelector("#activity-settings");
   const select = document.querySelector("#settings-activity");
   if (!form || !select) return;
-  const populate = () => { const item = settings.find(setting => setting.slug === select.value); if (!item) return; form.elements.pointsPerVisit.value = item.pointsPerVisit; form.elements.rewardThreshold.value = item.rewardThreshold; form.elements.rewardText.value = item.rewardText; };
+  const populate = () => { const item = settings.find(setting => setting.slug === select.value); if (!item) return; form.elements.pointsPerVisit.value = item.pointsPerVisit; form.elements.rewardThreshold.value = item.rewardThreshold; form.elements.rewardText.value = item.rewardText; form.elements.rewardTextAr.value = item.rewardTextAr || ""; };
   select.addEventListener("change", populate);
   form.addEventListener("submit", async event => {
     event.preventDefault();
@@ -278,33 +322,33 @@ function bindActivitySettings(settings) {
     const values = new FormData(form);
     submit.disabled = true; errorElement.textContent = "";
     try {
-      await callApi("owner-update-activity-settings", { activitySlug: values.get("activitySlug"), pointsPerVisit: Number(values.get("pointsPerVisit")), rewardThreshold: Number(values.get("rewardThreshold")), rewardText: values.get("rewardText") }, ownerAccessToken);
-      showToast("Activity reward rules saved.");
+      await callApi("owner-update-activity-settings", { activitySlug: values.get("activitySlug"), pointsPerVisit: Number(values.get("pointsPerVisit")), rewardThreshold: Number(values.get("rewardThreshold")), rewardText: values.get("rewardText"), rewardTextAr: values.get("rewardTextAr") }, ownerAccessToken);
+      showToast(t("dashboard.rulesSaved"));
       await render();
-    } catch (error) { errorElement.textContent = error.message; submit.disabled = false; }
+    } catch (error) { errorElement.textContent = localizeError(error); submit.disabled = false; }
   });
 }
 
 function scannerView(prefill = "") {
   if (!ownerAccessToken) { location.hash = "#/admin"; return ""; }
-  return `<section class="shell narrow"><div class="panel"><div class="panel-head"><div><p class="eyebrow">Team scanner</p><h2>Scan. Review. Confirm.</h2></div><button class="text-button" data-route="dashboard">Close</button></div><div class="scan-box"><video id="scanner-video" class="scanner-video" playsinline muted></video><button id="start-scanner" class="button primary">Start camera scanner</button><p class="hint">The built-in scanner works on iPhone, Samsung and other modern phones. The member must select the activity before showing the code. The normal phone Camera app is a backup, but a newly opened tab may ask staff to sign in again.</p><div class="field"><label for="scan-value">Or paste a one-time scan code</label><input id="scan-value" value="${escapeHtml(prefill)}" autocomplete="off" autocapitalize="off" spellcheck="false" /></div><button id="lookup-code" class="button secondary">Review visit</button><div id="scan-result" aria-live="polite"></div></div></div></section>`;
+  return `<section class="shell narrow"><div class="panel"><div class="panel-head"><div><p class="eyebrow">${escapeHtml(t("scanner.eyebrow"))}</p><h2>${escapeHtml(t("scanner.title"))}</h2></div><button class="text-button" data-route="dashboard">${escapeHtml(t("common.close"))}</button></div><div class="scan-box"><video id="scanner-video" class="scanner-video" playsinline muted></video><button id="start-scanner" class="button primary">${escapeHtml(t("scanner.start"))}</button><p class="hint">${escapeHtml(t("scanner.hint"))}</p><div class="field"><label for="scan-value">${escapeHtml(t("scanner.paste"))}</label><input id="scan-value" class="ltr-input" value="${escapeHtml(prefill)}" autocomplete="off" autocapitalize="off" spellcheck="false" /></div><button id="lookup-code" class="button secondary">${escapeHtml(t("scanner.review"))}</button><div id="scan-result" aria-live="polite"></div></div></div></section>`;
 }
 
 function privacyView() {
-  return `<section class="shell narrow"><div class="panel"><p class="eyebrow">Privacy</p><h2>Only what the program needs.</h2><p>X Group Passport uses your name, phone number, PIN-derived security data, separate activity balances and visit history to operate the loyalty program. PINs are processed into one-way security hashes and are not stored in readable form.</p><p>The QR contains a random, activity-specific scan token—not your phone number or balance. A new token expires after five minutes and can be accepted only once.</p><p>Registration is direct and your unique member code is generated automatically. The website does not send an SMS or independently prove ownership of the entered phone number. PIN recovery still requires a one-time code from staff after an in-person check. Ask the venue about correction, deactivation or deletion requests and any records it must retain.</p><button class="button secondary" data-route="passport">Back to passport</button></div></section>`;
+  return `<section class="shell narrow"><div class="panel"><p class="eyebrow">${escapeHtml(t("privacy.eyebrow"))}</p><h2>${escapeHtml(t("privacy.title"))}</h2><p>${escapeHtml(t("privacy.p1"))}</p><p>${escapeHtml(t("privacy.p2"))}</p><p>${escapeHtml(t("privacy.p3"))}</p><button class="button secondary" data-route="passport">${escapeHtml(t("privacy.back"))}</button></div></section>`;
 }
 
 async function installApp() {
   if (installPrompt) { installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; return; }
   const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  showToast(isiOS ? "On iPhone: tap Share, then Add to Home Screen." : "Open your browser menu and choose Install app or Add to Home screen.");
+  showToast(isiOS ? t("install.ios") : t("install.other"));
 }
 
 async function startScanner() {
   const video = document.querySelector("#scanner-video");
   const supportsNativeDetector = "BarcodeDetector" in window;
   const supportsFallbackDetector = typeof window.jsQR === "function";
-  if (!supportsNativeDetector && !supportsFallbackDetector) { showToast("Use the phone Camera app to open the member's QR, or paste the code below."); return; }
+  if (!supportsNativeDetector && !supportsFallbackDetector) { showToast(t("scanner.cameraFallback")); return; }
   try {
     scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
     video.srcObject = scannerStream; await video.play();
@@ -330,7 +374,7 @@ async function startScanner() {
         if (rawValue) { stopScanner(); await lookupCode(rawValue); }
       } catch {}
     }, 650);
-  } catch { showToast("Camera access was unavailable. Use the phone Camera app or paste the code."); }
+  } catch { showToast(t("scanner.cameraUnavailable")); }
 }
 function stopScanner() {
   if (scannerTimer) window.clearInterval(scannerTimer);
@@ -350,33 +394,34 @@ async function lookupCode(raw) {
   if (cameraButton) cameraButton.disabled = true;
   try {
     const scanToken = parseQrPayload(raw);
-    result.innerHTML = `<div class="loading">Verifying the one-time code…</div>`;
+    result.innerHTML = `<div class="loading">${escapeHtml(t("scanner.verifying"))}</div>`;
     const data = await callApi("owner-scan", { scanToken }, ownerAccessToken);
     scanLoaded = true;
     const selected = activityMeta(data.activity?.slug);
     const rewardsAvailable = safeNumber(data.rewardsAvailable);
-    const redeemButton = rewardsAvailable > 0 ? `<button id="redeem-reward" class="button secondary">Redeem 1 ${escapeHtml(selected.name)} reward</button>` : "";
-    result.innerHTML = `<div class="scan-result"><span class="pill">SCAN RECORDED</span><h3>${escapeHtml(data.displayName)}</h3><div class="scan-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><strong>${escapeHtml(data.activity?.name || selected.name)}</strong><span>${safeNumber(data.points)} points · ${rewardsAvailable} rewards · ${safeNumber(data.scanCount)} lifetime scans</span></div></div><p class="subtle">Previous ${escapeHtml(selected.name)} scan: ${escapeHtml(formatDubaiTime(data.previousScanAt))}</p><p>${escapeHtml(data.rewardText || "")} Confirm only after checking the member and activity shown above.</p><div class="actions"><button id="confirm-point" class="button primary">Confirm ${escapeHtml(selected.name)} +${safeNumber(data.pointsPerVisit)}</button>${redeemButton}<button id="cancel-scan" class="button ghost">No transaction</button></div></div>`;
+    const redeemButton = rewardsAvailable > 0 ? `<button id="redeem-reward" class="button reward-button">${escapeHtml(t("scanner.redeem", { activity: selected.name }))}</button>` : "";
+    const rewardText = getLanguage() === "ar" ? (data.rewardTextAr || data.rewardText) : data.rewardText;
+    result.innerHTML = `<div class="scan-result"><span class="pill">${escapeHtml(t("scanner.recorded"))}</span><h3>${escapeHtml(data.displayName)}</h3><div class="scan-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><strong>${escapeHtml(selected.name)}</strong><span>${escapeHtml(t("scanner.summary", { points: countLabel(data.points, "point"), rewards: countLabel(rewardsAvailable, "reward"), scans: countLabel(data.scanCount, "scan") }))}</span></div></div><p class="subtle">${escapeHtml(t("scanner.previous", { activity: selected.name, date: formatDubaiDateTime(data.previousScanAt) }))}</p><p>${escapeHtml(rewardText || "")} ${escapeHtml(t("scanner.confirmHint"))}</p><div class="actions"><button id="confirm-point" class="button primary">${escapeHtml(t("scanner.confirm", { activity: selected.name, points: safeNumber(data.pointsPerVisit) }))}</button>${redeemButton}<button id="cancel-scan" class="button ghost">${escapeHtml(t("scanner.cancel"))}</button></div></div>`;
     document.querySelector("#confirm-point")?.addEventListener("click", async event => {
       setTransactionActionsDisabled(result, true);
       try {
         const receipt = await callApi("owner-add-visit-point", { scanEventId: data.scanEventId, idempotencyKey: randomIdempotencyKey() }, ownerAccessToken);
-        result.innerHTML = `<div class="scan-result"><span class="pill">POINTS CONFIRMED</span><h3>${escapeHtml(data.displayName)}</h3><div class="scan-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><strong>${escapeHtml(receipt.activity?.name || selected.name)}</strong><span>New balance: ${safeNumber(receipt.points)} points · ${safeNumber(receipt.rewardsAvailable)} rewards available</span></div></div><p class="hint">Transaction ${escapeHtml(receipt.transactionId)}</p><button class="button primary" data-route="scanner">Scan next passport</button></div>`;
-      } catch (error) { showToast(error.message); setTransactionActionsDisabled(result, false); }
+        result.innerHTML = `<div class="scan-result"><span class="pill">${escapeHtml(t("scanner.confirmed"))}</span><h3>${escapeHtml(data.displayName)}</h3><div class="scan-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><strong>${escapeHtml(selected.name)}</strong><span>${escapeHtml(t("scanner.newBalance", { points: countLabel(receipt.points, "point"), rewards: countLabel(receipt.rewardsAvailable, "reward") }))}</span></div></div><p class="hint">${escapeHtml(t("common.transaction", { id: receipt.transactionId }))}</p><button class="button primary" data-route="scanner">${escapeHtml(t("scanner.next"))}</button></div>`;
+      } catch (error) { showToast(localizeError(error)); setTransactionActionsDisabled(result, false); }
     });
     document.querySelector("#redeem-reward")?.addEventListener("click", async event => {
       setTransactionActionsDisabled(result, true);
       try {
         const receipt = await callApi("owner-redeem-reward", { scanEventId: data.scanEventId, idempotencyKey: randomIdempotencyKey() }, ownerAccessToken);
-        result.innerHTML = `<div class="scan-result"><span class="pill">REWARD REDEEMED</span><h3>${escapeHtml(data.displayName)}</h3><div class="scan-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><strong>${escapeHtml(receipt.activity?.name || selected.name)}</strong><span>${safeNumber(receipt.points)} points · ${safeNumber(receipt.rewardsAvailable)} rewards remain</span></div></div><p class="hint">Transaction ${escapeHtml(receipt.transactionId)}</p><button class="button primary" data-route="scanner">Scan next passport</button></div>`;
-      } catch (error) { showToast(error.message); setTransactionActionsDisabled(result, false); }
+        result.innerHTML = `<div class="scan-result"><span class="pill">${escapeHtml(t("scanner.redeemed"))}</span><h3>${escapeHtml(data.displayName)}</h3><div class="scan-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><strong>${escapeHtml(selected.name)}</strong><span>${escapeHtml(t("scanner.remaining", { points: countLabel(receipt.points, "point"), rewards: countLabel(receipt.rewardsAvailable, "reward") }))}</span></div></div><p class="hint">${escapeHtml(t("common.transaction", { id: receipt.transactionId }))}</p><button class="button primary" data-route="scanner">${escapeHtml(t("scanner.next"))}</button></div>`;
+      } catch (error) { showToast(localizeError(error)); setTransactionActionsDisabled(result, false); }
     });
     document.querySelector("#cancel-scan")?.addEventListener("click", async event => {
       setTransactionActionsDisabled(result, true);
-      try { await callApi("owner-cancel-scan", { scanEventId: data.scanEventId }, ownerAccessToken); result.innerHTML = `<div class="notice">The scan remains in the audit history; no points were added.</div>`; }
-      catch (error) { showToast(error.message); setTransactionActionsDisabled(result, false); }
+      try { await callApi("owner-cancel-scan", { scanEventId: data.scanEventId }, ownerAccessToken); result.innerHTML = `<div class="notice">${escapeHtml(t("scanner.cancelled"))}</div>`; }
+      catch (error) { showToast(localizeError(error)); setTransactionActionsDisabled(result, false); }
     });
-  } catch (error) { result.innerHTML = `<div class="notice">${escapeHtml(error.message)}</div>`; }
+  } catch (error) { result.innerHTML = `<div class="notice">${escapeHtml(localizeError(error))}</div>`; }
   finally {
     scanLookupInFlight = false;
     if (!scanLoaded) {
@@ -394,22 +439,22 @@ function bindForms(route) {
   if (route === "join") document.querySelector("#join-form")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#join-error"); errorElement.textContent = "";
     try { const pin = validatePin(form.get("pin")); if (pin !== form.get("pinConfirm")) throw new Error("PINs do not match."); const data = await callApi("enroll", { displayName: form.get("name"), phone: normalizePhone(form.get("phone")), pin, consent: form.get("consent") === "on" }); localStorage.setItem(customerKey, data.sessionToken); localStorage.setItem(qrKey, data.qrToken); location.hash = "#/member/laser-tag"; }
-    catch (error) { errorElement.textContent = error.message; setFormBusy(formElement, false); }
+    catch (error) { errorElement.textContent = localizeError(error); setFormBusy(formElement, false); }
   });
   if (route === "login") document.querySelector("#customer-login")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#login-error"); errorElement.textContent = "";
     try { const data = await callApi("customer-login", { phone: normalizePhone(form.get("phone")), pin: validatePin(form.get("pin")) }); localStorage.setItem(customerKey, data.sessionToken); localStorage.setItem(qrKey, data.qrToken); location.hash = "#/member/laser-tag"; }
-    catch (error) { errorElement.textContent = error.message; setFormBusy(formElement, false); }
+    catch (error) { errorElement.textContent = localizeError(error); setFormBusy(formElement, false); }
   });
   if (route === "recover") document.querySelector("#recover-form")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#recover-error"); errorElement.textContent = "";
     try { const pin = validatePin(form.get("pin")); if (pin !== form.get("pinConfirm")) throw new Error("PINs do not match."); const data = await callApi("recover-pin", { phone: normalizePhone(form.get("phone")), resetCode: form.get("resetCode"), newPin: pin }); localStorage.setItem(customerKey, data.sessionToken); localStorage.setItem(qrKey, data.qrToken); location.hash = "#/member/laser-tag"; }
-    catch (error) { errorElement.textContent = error.message; setFormBusy(formElement, false); }
+    catch (error) { errorElement.textContent = localizeError(error); setFormBusy(formElement, false); }
   });
   if (route === "owner" || route === "admin") document.querySelector("#owner-login")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#owner-error"); errorElement.textContent = "";
     try { const token = await ownerLogin(form.get("email"), form.get("password")); await callApi("owner-check", {}, token); ownerAccessToken = token; const pending = pendingScanToken; pendingScanToken = ""; location.hash = pending ? `#/scan/${pending}` : "#/dashboard"; }
-    catch (error) { errorElement.textContent = error.message; setFormBusy(formElement, false); }
+    catch (error) { errorElement.textContent = localizeError(error); setFormBusy(formElement, false); }
   });
   if (route === "scanner") { document.querySelector("#start-scanner")?.addEventListener("click", startScanner); document.querySelector("#lookup-code")?.addEventListener("click", () => lookupCode(document.querySelector("#scan-value").value)); }
 }
@@ -418,7 +463,7 @@ async function render() {
   stopScanner();
   const generation = ++renderGeneration;
   if (window.top !== window.self) {
-    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Direct access required</p><h2>Open X Group Passport in its own tab.</h2><p>For your security, registration, passport and team controls are disabled when this site is embedded inside another page.</p></div></section>`;
+    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">${escapeHtml(t("iframe.eyebrow"))}</p><h2>${escapeHtml(t("iframe.title"))}</h2><p>${escapeHtml(t("iframe.body"))}</p></div></section>`;
     settleViewPosition();
     return;
   }

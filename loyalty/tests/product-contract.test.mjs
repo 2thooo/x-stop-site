@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
+const i18n = readFileSync(new URL("../src/i18n.js", import.meta.url), "utf8");
+const index = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 const config = readFileSync(new URL("../config.js", import.meta.url), "utf8");
 const edge = readFileSync(new URL("../supabase/functions/loyalty-api/index.ts", import.meta.url), "utf8");
@@ -10,7 +12,7 @@ const migration = readFileSync(new URL("../supabase/migrations/20260905151500_ra
 
 test("customer registration does not request or send a join code", () => {
   assert.doesNotMatch(app, /join-code|inviteCode|create-invite/);
-  assert.match(app, /Your unique member code is created automatically/);
+  assert.match(i18n, /Your unique member code is created automatically/);
   assert.doesNotMatch(edge, /owner-create-enrollment-invite|p_invite_hash/);
 });
 
@@ -23,7 +25,7 @@ test("member codes are random, non-enumerable and collision guarded", () => {
 
 test("booking exposes three verified Google Maps destinations", () => {
   assert.equal((config.match(/https:\/\/www\.google\.com\/maps\?cid=/g) || []).length, 3);
-  assert.match(app, />Directions<\/a>/);
+  assert.match(i18n, /"common\.directions": "Directions"/);
   assert.match(app, /venueMapUrl/);
 });
 
@@ -32,4 +34,19 @@ test("compact booking cards remain in a side-by-side mobile rail", () => {
   assert.match(styles, /grid-auto-flow:\s*column/);
   assert.match(styles, /scroll-snap-type:\s*x mandatory/);
   assert.match(styles, /\.venue-visual\s*\{[^}]*height:\s*118px/s);
+});
+
+test("English and Arabic can be toggled without changing routes", () => {
+  assert.match(index, /id="language-toggle"/);
+  assert.match(app, /x_loyalty_language|setLanguage\(/);
+  assert.match(i18n, /جواز الأنشطة/);
+  assert.match(styles, /html\[lang="ar"\]/);
+  assert.match(styles, /font-family:\s*"Tajawal"/);
+});
+
+test("customer reward action only prepares an admin-confirmed scan", () => {
+  assert.match(app, /id="request-redeem"/);
+  assert.match(app, /member\.redeemHint/);
+  assert.match(app, /owner-redeem-reward/);
+  assert.doesNotMatch(app, /request-redeem[\s\S]{0,300}owner-redeem-reward/);
 });
