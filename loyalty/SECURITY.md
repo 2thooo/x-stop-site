@@ -92,6 +92,14 @@ The staff bearer token is kept only in page memory and is never placed in browse
 
 Successful recovery revokes old customer sessions and QR credentials. The database stores only the reset-code hash.
 
+## Owner member search and scan-count corrections
+
+- Full phone numbers are returned only by the owner-authenticated member-search endpoint. The general dashboard list remains masked, a query requires at least four digits, and responses are capped at 20 matches.
+- Verify the customer against the display name and member code before creating a PIN-reset code. Staff must never ask for or reveal an existing PIN; only the customer chooses the replacement PIN.
+- Never delete or rewrite `scan_events` to fix a count. Use the dashboard correction control, enter the intended effective total and record a meaningful reason.
+- Corrections are appended to `scan_count_corrections`; UPDATE, DELETE and TRUNCATE are blocked. Each row records the before/after count, delta, owner identity, branch, reason and timestamp.
+- A scan-count correction changes reporting only. It must not change `loyalty_accounts`, point balances, available rewards or reward-redemption history.
+
 ## Key or backend compromise
 
 If a secret/service-role key is exposed:

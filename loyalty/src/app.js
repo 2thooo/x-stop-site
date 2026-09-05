@@ -25,6 +25,7 @@ let scanLookupInFlight = false;
 let renderGeneration = 0;
 let ownerAccessToken = null;
 let pendingScanToken = "";
+let ownerMemberSearchState = { query: "", members: null };
 
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
@@ -260,6 +261,205 @@ function ownerActivityCards(items) {
   return `<div class="activity-grid dashboard-activities">${list.map(item => { const meta = activityMeta(item.slug); return `<article class="activity-tile"><img src="${meta.icon}" alt="" width="52" height="52" /><strong>${escapeHtml(meta.name)}</strong><span>${escapeHtml(t("dashboard.activitySummary", { scans: countLabel(item.scans, "scan"), points: countLabel(item.pointsAwarded, "point") }))}</span></article>`; }).join("")}</div>`;
 }
 
+function phoneSearchDigits(value) {
+  return String(value || "")
+    .replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 0x06f0))
+    .replace(/\D/g, "")
+    .slice(0, 15);
+}
+
+function ownerSessionEnded(error) {
+  if (error?.status !== 401 && error?.status !== 403) return false;
+  ownerAccessToken = null;
+  ownerMemberSearchState = { query: "", members: null };
+  showToast(t("dashboard.sessionExpired"));
+  location.hash = "#/admin";
+  return true;
+}
+
+function memberStatusLabel(value) {
+  const status = String(value || "active").trim().toLowerCase();
+  const key = `dashboard.status.${status}`;
+  const label = t(key);
+  return label === key ? status.replaceAll("_", " ") : label;
+}
+
+function memberBalanceCards(balances) {
+  const list = Array.isArray(balances) ? balances : [];
+  if (!list.length) return `<p class="subtle member-search-empty">${escapeHtml(t("dashboard.noBalances"))}</p>`;
+  return `<div class="member-balance-grid">${list.map(balance => {
+    const slug = String(balance.slug || "others");
+    const configuredName = String(balance.name || "").trim();
+    const localizedName = activityName(slug);
+    const name = localizedName.startsWith("activity.") ? configuredName || slug : localizedName;
+    return `<div class="member-balance"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(countLabel(balance.points, "point"))}</span><span>${escapeHtml(countLabel(balance.rewardsAvailable, "reward"))}</span></div>`;
+  }).join("")}</div>`;
+}
+
+function memberCorrectionHistory(corrections) {
+  const list = Array.isArray(corrections) ? corrections.slice(0, 5) : [];
+  if (!list.length) return "";
+  return `<details class="correction-history"><summary>${escapeHtml(t("dashboard.correctionsTitle"))}</summary><div class="correction-history-list">${list.map(correction => {
+    const actor = String(correction.actorDisplayName || t("dashboard.unknownStaff"));
+    return `<article><div><strong><bdi dir="ltr">${safeNumber(correction.beforeCount)} → ${safeNumber(correction.afterCount)}</bdi></strong><span>${escapeHtml(formatDubaiDateTime(correction.occurredAt))}</span></div><p>${escapeHtml(correction.reason || "")}</p><small>${escapeHtml(t("dashboard.correctedBy", { actor }))}</small></article>`;
+  }).join("")}</div></details>`;
+}
+
+function memberSearchCard(member) {
+  const customerId = String(member.customerId || "");
+  const displayName = String(member.displayName || member.username || t("dashboard.unnamedMember"));
+  const username = String(member.username || "").trim();
+  const nameAndUsername = username && username !== displayName ? `${displayName} · ${username}` : displayName;
+  const phone = String(member.phone || "").trim();
+  const callablePhone = phone.replace(/[^+\d]/g, "");
+  const memberCode = String(member.memberCode || "—");
+  const status = String(member.status || "active").toLowerCase();
+  const recordedCount = safeNumber(member.recordedScanCount);
+  const effectiveCount = safeNumber(member.scanCount);
+  const resetDisabled = status !== "active";
+  const phoneMarkup = callablePhone
+    ? `<a class="member-phone" href="tel:${escapeHtml(callablePhone)}"><bdi dir="ltr">${escapeHtml(phone)}</bdi></a>`
+    : `<bdi class="member-phone" dir="ltr">—</bdi>`;
+  return `<article class="member-search-card">
+    <div class="member-search-head"><div><p class="member-search-code"><bdi dir="ltr">${escapeHtml(memberCode)}</bdi></p><h4>${escapeHtml(nameAndUsername)}</h4>${phoneMarkup}</div><span class="member-status ${status === "active" ? "is-active" : ""}">${escapeHtml(memberStatusLabel(status))}</span></div>
+    <dl class="member-facts"><div><dt>${escapeHtml(t("dashboard.nameUsername"))}</dt><dd>${escapeHtml(nameAndUsername)}</dd></div><div><dt>${escapeHtml(t("dashboard.memberCode"))}</dt><dd><bdi dir="ltr">${escapeHtml(memberCode)}</bdi></dd></div><div><dt>${escapeHtml(t("dashboard.effectiveScans"))}</dt><dd><bdi dir="ltr">${effectiveCount}</bdi></dd></div><div><dt>${escapeHtml(t("dashboard.recordedScans"))}</dt><dd><bdi dir="ltr">${recordedCount}</bdi></dd></div><div><dt>${escapeHtml(t("dashboard.lastScan"))}</dt><dd>${escapeHtml(formatDubaiDateTime(member.lastScannedAt))}</dd></div><div><dt>${escapeHtml(t("dashboard.created"))}</dt><dd>${escapeHtml(formatDubaiDateTime(member.createdAt))}</dd></div></dl>
+    <div class="member-balance-section"><h5>${escapeHtml(t("dashboard.activityBalances"))}</h5>${memberBalanceCards(member.activityBalances)}</div>
+    <div class="member-search-actions"><button class="button ghost member-search-reset" type="button" data-customer-id="${escapeHtml(customerId)}"${resetDisabled ? ` disabled title="${escapeHtml(t("dashboard.resetUnavailable"))}"` : ""}>${escapeHtml(t("dashboard.resetPin"))}</button></div>
+    ${memberCorrectionHistory(member.scanCorrections)}
+    <details class="scan-correction"><summary>${escapeHtml(t("dashboard.correctScans"))}</summary><div class="scan-correction-body"><div class="correction-safety-note" role="note"><strong>${escapeHtml(t("dashboard.correctionSafetyTitle"))}</strong><span>${escapeHtml(t("dashboard.correctionNote"))}</span></div><p class="hint">${escapeHtml(t("dashboard.correctionCurrent", { effective: effectiveCount, recorded: recordedCount }))}</p><form class="compact-form scan-correction-form" data-customer-id="${escapeHtml(customerId)}" data-member-name="${escapeHtml(displayName)}" data-current-count="${effectiveCount}"><div class="field"><label>${escapeHtml(t("dashboard.correctionTarget"))}<input class="ltr-input" name="targetCount" type="number" min="0" step="1" value="${effectiveCount}" required /></label></div><div class="field"><label>${escapeHtml(t("dashboard.correctionReason"))}<textarea name="reason" dir="auto" minlength="3" maxlength="500" placeholder="${escapeHtml(t("dashboard.correctionReasonPlaceholder"))}" required></textarea></label></div><label class="check-row correction-confirm"><input name="confirmCorrection" type="checkbox" required /><span>${escapeHtml(t("dashboard.correctionConfirm"))}</span></label><p class="form-error correction-error" role="alert"></p><button class="button secondary" type="submit">${escapeHtml(t("dashboard.correctionSubmit"))}</button></form></div></details>
+  </article>`;
+}
+
+function renderMemberSearchResults(options = {}) {
+  const container = document.querySelector("#member-search-results");
+  if (!container) return;
+  if (options.loading) {
+    container.innerHTML = `<div class="member-search-feedback">${escapeHtml(t("dashboard.searching"))}</div>`;
+    return;
+  }
+  if (!ownerMemberSearchState.query) { container.innerHTML = ""; return; }
+  const members = Array.isArray(ownerMemberSearchState.members) ? ownerMemberSearchState.members : [];
+  if (!members.length) {
+    container.innerHTML = `<div class="member-search-feedback">${escapeHtml(t("dashboard.searchNone"))}</div>`;
+    return;
+  }
+  container.innerHTML = `<div class="member-search-summary">${escapeHtml(t("dashboard.searchFound", { count: countLabel(members.length, "member") }))}</div><div class="member-search-grid">${members.map(memberSearchCard).join("")}</div>`;
+}
+
+async function runOwnerMemberSearch(value) {
+  const form = document.querySelector("#member-search-form");
+  const errorElement = document.querySelector("#member-search-error");
+  const query = phoneSearchDigits(value);
+  if (!form || !errorElement) return;
+  errorElement.textContent = "";
+  if (query.length < 4) {
+    errorElement.textContent = t("dashboard.searchMinimum");
+    form.elements.phone.focus();
+    return;
+  }
+  ownerMemberSearchState = { query, members: null };
+  form.elements.phone.value = query;
+  setFormBusy(form, true);
+  renderMemberSearchResults({ loading: true });
+  const token = ownerAccessToken;
+  try {
+    const data = await callApi("owner-member-search", { phone: query }, token);
+    if (token !== ownerAccessToken) return;
+    ownerMemberSearchState = { query, members: Array.isArray(data.members) ? data.members : [] };
+    renderMemberSearchResults();
+  } catch (error) {
+    if (token !== ownerAccessToken) return;
+    if (ownerSessionEnded(error)) return;
+    ownerMemberSearchState = { query, members: null };
+    errorElement.textContent = localizeError(error);
+    const results = document.querySelector("#member-search-results");
+    if (results) results.innerHTML = "";
+  } finally {
+    if (form.isConnected) setFormBusy(form, false);
+  }
+}
+
+async function submitScanCountCorrection(form) {
+  const values = new FormData(form);
+  const rawTarget = String(values.get("targetCount") || "").trim();
+  const targetCount = Number(rawTarget);
+  const reason = String(values.get("reason") || "").trim();
+  const errorElement = form.querySelector(".correction-error");
+  const currentCount = safeNumber(form.dataset.currentCount);
+  const memberName = form.dataset.memberName || t("dashboard.unnamedMember");
+  errorElement.textContent = "";
+  if (!rawTarget || !Number.isSafeInteger(targetCount) || targetCount < 0) {
+    errorElement.textContent = t("dashboard.correctionInvalidTarget");
+    return;
+  }
+  if (reason.length < 3 || reason.length > 500) {
+    errorElement.textContent = t("dashboard.correctionInvalidReason");
+    return;
+  }
+  if (values.get("confirmCorrection") !== "on") {
+    errorElement.textContent = t("dashboard.correctionConfirmRequired");
+    return;
+  }
+  if (targetCount === currentCount) {
+    errorElement.textContent = t("dashboard.correctionSame");
+    return;
+  }
+  if (!window.confirm(t("dashboard.correctionDialog", { name: memberName, count: targetCount }))) return;
+  setFormBusy(form, true);
+  try {
+    const token = ownerAccessToken;
+    await callApi("owner-set-scan-count", { customerId: form.dataset.customerId, targetCount, reason }, token);
+    if (token !== ownerAccessToken) return;
+    const query = ownerMemberSearchState.query;
+    let refreshError = null;
+    if (query) {
+      try {
+        const data = await callApi("owner-member-search", { phone: query }, token);
+        if (token !== ownerAccessToken) return;
+        ownerMemberSearchState = { query, members: Array.isArray(data.members) ? data.members : [] };
+      } catch (error) {
+        if (token !== ownerAccessToken) return;
+        if (ownerSessionEnded(error)) return;
+        ownerMemberSearchState = { query, members: null };
+        refreshError = error;
+      }
+    }
+    await render();
+    if (!ownerAccessToken) return;
+    showToast(t("dashboard.correctionSaved"));
+    if (refreshError) {
+      const searchError = document.querySelector("#member-search-error");
+      if (searchError) searchError.textContent = t("dashboard.searchRefreshFailed");
+    }
+  } catch (error) {
+    if (ownerSessionEnded(error)) return;
+    errorElement.textContent = localizeError(error);
+    if (form.isConnected) setFormBusy(form, false);
+  }
+}
+
+function bindOwnerMemberSearch() {
+  const form = document.querySelector("#member-search-form");
+  const results = document.querySelector("#member-search-results");
+  if (!form || !results) return;
+  renderMemberSearchResults();
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    runOwnerMemberSearch(new FormData(form).get("phone"));
+  });
+  results.addEventListener("click", event => {
+    const resetButton = event.target.closest(".member-search-reset");
+    if (resetButton) createResetCode(resetButton);
+  });
+  results.addEventListener("submit", event => {
+    const correctionForm = event.target.closest(".scan-correction-form");
+    if (!correctionForm) return;
+    event.preventDefault();
+    submitScanCountCorrection(correctionForm);
+  });
+}
+
 async function dashboardView(generation = renderGeneration, customerOffset = 0) {
   const ownerToken = ownerAccessToken;
   if (!ownerToken) { location.hash = "#/admin"; return; }
@@ -274,23 +474,19 @@ async function dashboardView(generation = renderGeneration, customerOffset = 0) 
     const pageStart = (data.customers || []).length ? safeNumber(customerPage.offset) + 1 : 0;
     const pageEnd = Math.min(safeNumber(customerPage.total), safeNumber(customerPage.offset) + (data.customers || []).length);
     app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">${escapeHtml(t("dashboard.eyebrow"))}</p><h2>${escapeHtml(t("dashboard.title"))}</h2><p class="subtle">${escapeHtml(t("dashboard.body"))}</p></div><div class="actions"><button class="button primary" data-route="scanner">${escapeHtml(t("dashboard.scan"))}</button><button id="owner-logout" class="button secondary">${escapeHtml(t("common.signOut"))}</button></div></div>
-      <div class="metric-grid"><div class="metric"><span>${escapeHtml(t("dashboard.activeMembers"))}</span><strong>${safeNumber(data.metrics?.customers)}</strong></div><div class="metric"><span>${escapeHtml(t("dashboard.acceptedScans"))}</span><strong>${safeNumber(data.metrics?.scans)}</strong></div><div class="metric"><span>${escapeHtml(t("dashboard.pointsAwarded"))}</span><strong>${safeNumber(data.metrics?.pointsAwarded)}</strong></div><div class="metric"><span>${escapeHtml(t("dashboard.scansToday"))}</span><strong>${safeNumber(data.metrics?.scansToday)}</strong></div></div>${ownerActivityCards(activitySettings)}
-      <div class="owner-tools"><article class="tool-card"><h3>${escapeHtml(t("dashboard.rules"))}</h3><p>${escapeHtml(t("dashboard.rulesBody"))}</p><form id="activity-settings" class="compact-form"><div class="field"><label for="settings-activity">${escapeHtml(t("dashboard.activity"))}</label><select id="settings-activity" name="activitySlug">${activitySettings.map(item => `<option value="${escapeHtml(item.slug)}">${escapeHtml(activityName(item.slug))}</option>`).join("")}</select></div><div class="settings-row"><div class="field"><label for="points-per-visit">${escapeHtml(t("dashboard.pointsPerVisit"))}</label><input id="points-per-visit" name="pointsPerVisit" type="number" min="1" max="20" value="${safeNumber(defaultSetting.pointsPerVisit)}" required /></div><div class="field"><label for="reward-threshold">${escapeHtml(t("dashboard.rewardTarget"))}</label><input id="reward-threshold" name="rewardThreshold" type="number" min="2" max="1000" value="${safeNumber(defaultSetting.rewardThreshold)}" required /></div></div><div class="field"><label for="reward-text">${escapeHtml(t("dashboard.rewardTextEn"))}</label><input id="reward-text" class="ltr-input" name="rewardText" maxlength="200" value="${escapeHtml(defaultSetting.rewardText)}" required /></div><div class="field"><label for="reward-text-ar">${escapeHtml(t("dashboard.rewardTextAr"))}</label><input id="reward-text-ar" class="rtl-input" name="rewardTextAr" maxlength="200" value="${escapeHtml(defaultSetting.rewardTextAr || "")}" required /></div><p class="form-error" id="settings-error" role="alert"></p><button class="button ghost" type="submit">${escapeHtml(t("dashboard.saveRules"))}</button></form></article></div>
+      <div class="metric-grid"><div class="metric"><span>${escapeHtml(t("dashboard.activeMembers"))}</span><strong>${safeNumber(data.metrics?.customers)}</strong></div><div class="metric"><span>${escapeHtml(t("dashboard.acceptedScans"))}</span><strong>${safeNumber(data.metrics?.scans)}</strong><small>${escapeHtml(t("dashboard.recordedMetric", { count: safeNumber(data.metrics?.recordedScans ?? data.metrics?.scans) }))}</small></div><div class="metric"><span>${escapeHtml(t("dashboard.pointsAwarded"))}</span><strong>${safeNumber(data.metrics?.pointsAwarded)}</strong></div><div class="metric"><span>${escapeHtml(t("dashboard.scansToday"))}</span><strong>${safeNumber(data.metrics?.scansToday)}</strong></div></div>${ownerActivityCards(activitySettings)}
+      <div class="owner-tools"><article class="tool-card member-search-tool"><h3>${escapeHtml(t("dashboard.searchTitle"))}</h3><p>${escapeHtml(t("dashboard.searchBody"))}</p><form id="member-search-form" class="member-search-form" role="search"><div class="field"><label for="member-search-phone">${escapeHtml(t("dashboard.searchPhone"))}</label><input id="member-search-phone" class="ltr-input" name="phone" type="tel" inputmode="tel" minlength="4" maxlength="24" value="${escapeHtml(ownerMemberSearchState.query)}" placeholder="${escapeHtml(t("dashboard.searchPlaceholder"))}" autocomplete="off" required /></div><button class="button primary" type="submit">${escapeHtml(t("dashboard.searchSubmit"))}</button><p class="form-error member-search-error" id="member-search-error" role="alert"></p></form><div id="member-search-results" aria-live="polite" aria-atomic="false"></div></article><article class="tool-card"><h3>${escapeHtml(t("dashboard.rules"))}</h3><p>${escapeHtml(t("dashboard.rulesBody"))}</p><form id="activity-settings" class="compact-form"><div class="field"><label for="settings-activity">${escapeHtml(t("dashboard.activity"))}</label><select id="settings-activity" name="activitySlug">${activitySettings.map(item => `<option value="${escapeHtml(item.slug)}">${escapeHtml(activityName(item.slug))}</option>`).join("")}</select></div><div class="settings-row"><div class="field"><label for="points-per-visit">${escapeHtml(t("dashboard.pointsPerVisit"))}</label><input id="points-per-visit" name="pointsPerVisit" type="number" min="1" max="20" value="${safeNumber(defaultSetting.pointsPerVisit)}" required /></div><div class="field"><label for="reward-threshold">${escapeHtml(t("dashboard.rewardTarget"))}</label><input id="reward-threshold" name="rewardThreshold" type="number" min="2" max="1000" value="${safeNumber(defaultSetting.rewardThreshold)}" required /></div></div><div class="field"><label for="reward-text">${escapeHtml(t("dashboard.rewardTextEn"))}</label><input id="reward-text" class="ltr-input" name="rewardText" maxlength="200" value="${escapeHtml(defaultSetting.rewardText)}" required /></div><div class="field"><label for="reward-text-ar">${escapeHtml(t("dashboard.rewardTextAr"))}</label><input id="reward-text-ar" class="rtl-input" name="rewardTextAr" maxlength="200" value="${escapeHtml(defaultSetting.rewardTextAr || "")}" required /></div><p class="form-error" id="settings-error" role="alert"></p><button class="button ghost" type="submit">${escapeHtml(t("dashboard.saveRules"))}</button></form></article></div>
       <div id="reset-result" aria-live="polite"></div><div class="panel"><div class="panel-head"><div><h3>${escapeHtml(t("dashboard.members"))}</h3><span class="subtle">${escapeHtml(t("dashboard.membersHint"))}</span></div><span class="hint">${escapeHtml(t("dashboard.showing", { start: pageStart, end: pageEnd, total: safeNumber(customerPage.total) }))}</span></div><div class="table-wrap"><table><thead><tr><th>${escapeHtml(t("dashboard.thMember"))}</th><th>${escapeHtml(t("dashboard.thPhone"))}</th><th>${escapeHtml(t("dashboard.thPoints"))}</th><th>${escapeHtml(t("dashboard.thScans"))}</th><th>${escapeHtml(t("dashboard.thLast"))}</th><th>${escapeHtml(t("dashboard.thAccount"))}</th></tr></thead><tbody>${(data.customers || []).map(customer => `<tr><td>${escapeHtml(customer.displayName)}<br><bdi class="hint" dir="ltr">${escapeHtml(customer.memberCode)}</bdi></td><td><bdi dir="ltr">${escapeHtml(customer.maskedPhone)}</bdi></td><td>${activityBadges(customer.activityBalances)}</td><td>${safeNumber(customer.scanCount)}</td><td>${escapeHtml(formatDubaiDateTime(customer.lastScannedAt))}</td><td><button class="button ghost reset-pin" data-customer-id="${escapeHtml(customer.customerId)}">${escapeHtml(t("dashboard.resetPin"))}</button></td></tr>`).join("") || `<tr><td colspan="6" class="empty">${escapeHtml(t("dashboard.noMembers"))}</td></tr>`}</tbody></table></div><div class="page-controls">${safeNumber(customerPage.offset) > 0 ? `<button class="button ghost" data-route="dashboard/${Math.max(0, safeNumber(customerPage.offset) - safeNumber(customerPage.limit))}">${escapeHtml(t("dashboard.previous"))}</button>` : ""}${customerPage.hasMore ? `<button class="button ghost" data-route="dashboard/${safeNumber(customerPage.offset) + safeNumber(customerPage.limit)}">${escapeHtml(t("dashboard.next"))}</button>` : ""}</div></div>
       <div class="panel history-panel"><div class="panel-head"><div><h3>${escapeHtml(t("dashboard.history"))}</h3><span class="subtle">${escapeHtml(t("dashboard.historyHint"))}</span></div></div><div class="table-wrap"><table><thead><tr><th>${escapeHtml(t("dashboard.thTime"))}</th><th>${escapeHtml(t("dashboard.thMember"))}</th><th>${escapeHtml(t("dashboard.thActivity"))}</th><th>${escapeHtml(t("dashboard.thEvent"))}</th><th>${escapeHtml(t("dashboard.thChange"))}</th><th>${escapeHtml(t("dashboard.thBalance"))}</th></tr></thead><tbody>${(data.recentEvents || []).map(event => `<tr><td>${escapeHtml(formatDubaiDateTime(event.occurredAt))}</td><td>${escapeHtml(event.displayName)}<br><bdi class="hint" dir="ltr">${escapeHtml(event.memberCode)}</bdi></td><td>${escapeHtml(activityName(event.activitySlug))}</td><td>${escapeHtml(eventActionLabel(event.action))}</td><td>${escapeHtml(eventChange(event))}</td><td><bdi dir="ltr">${safeNumber(event.balanceBefore)} → ${safeNumber(event.balanceAfter)}</bdi></td></tr>`).join("") || `<tr><td colspan="6" class="empty">${escapeHtml(t("dashboard.noActivity"))}</td></tr>`}</tbody></table></div></div>
       </section>`;
     settleViewPosition();
-    document.querySelector("#owner-logout")?.addEventListener("click", () => { ownerAccessToken = null; location.hash = "#/"; });
+    document.querySelector("#owner-logout")?.addEventListener("click", () => { ownerAccessToken = null; ownerMemberSearchState = { query: "", members: null }; location.hash = "#/"; });
+    bindOwnerMemberSearch();
     document.querySelectorAll(".reset-pin").forEach(button => button.addEventListener("click", () => createResetCode(button)));
     bindActivitySettings(activitySettings);
   } catch (error) {
     if (generation !== renderGeneration) return;
-    if (error.status === 401 || error.status === 403) {
-      ownerAccessToken = null;
-      showToast(t("dashboard.sessionExpired"));
-      location.hash = "#/admin";
-      return;
-    }
+    if (ownerSessionEnded(error)) return;
     app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">${escapeHtml(t("dashboard.unavailable"))}</p><h2>${escapeHtml(t("dashboard.sessionSaved"))}</h2><p>${escapeHtml(localizeError(error))}</p><div class="actions"><button class="button primary" data-route="dashboard">${escapeHtml(t("common.retry"))}</button><button class="button secondary" data-route="passport">${escapeHtml(t("dashboard.customerPassport"))}</button></div></div></section>`;
     settleViewPosition();
   }
@@ -298,6 +494,7 @@ async function dashboardView(generation = renderGeneration, customerOffset = 0) 
 
 async function createResetCode(button) {
   const result = document.querySelector("#reset-result");
+  if (!result) return;
   button.disabled = true;
   try {
     const data = await callApi("owner-create-pin-reset", { customerId: button.dataset.customerId, expiresInMinutes: 15 }, ownerAccessToken);
@@ -305,8 +502,11 @@ async function createResetCode(button) {
     result.innerHTML = `<div class="notice reset-notice"><strong>${escapeHtml(t("reset.title", { name: data.displayName }))}</strong><div class="setup-code-grid">${qr}<div><bdi class="code-display compact" dir="ltr">${escapeHtml(data.resetCode)}</bdi><span>${escapeHtml(t("reset.instructions", { date: formatDubaiDateTime(data.expiresAt) }))}</span><button class="button ghost copy-code" data-code="${escapeHtml(data.resetCode)}">${escapeHtml(t("reset.copy"))}</button></div></div></div>`;
     result.querySelector(".copy-code")?.addEventListener("click", copyCode);
     result.scrollIntoView({ behavior: "smooth", block: "center" });
-  } catch (error) { result.innerHTML = `<div class="notice">${escapeHtml(localizeError(error))}</div>`; }
-  finally { button.disabled = false; }
+  } catch (error) {
+    if (ownerSessionEnded(error)) return;
+    result.innerHTML = `<div class="notice">${escapeHtml(localizeError(error))}</div>`;
+  }
+  finally { if (button.isConnected) button.disabled = false; }
 }
 
 async function copyCode(event) {

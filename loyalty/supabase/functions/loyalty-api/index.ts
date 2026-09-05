@@ -55,6 +55,15 @@ function normalizePhone(input: unknown) {
   return value;
 }
 
+function normalizePhoneSearch(input: unknown) {
+  const value=String(input || "").trim();
+  if (!value || /[^\d+\s().-]/.test(value)) throw new Error("INVALID_INPUT");
+  let digits=value.replace(/\D/g, "");
+  if (digits.startsWith("00")) digits=digits.slice(2);
+  if (digits.length<4 || digits.length>15) throw new Error("INVALID_INPUT");
+  return digits;
+}
+
 function base64url(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -188,6 +197,7 @@ function publicError(error: unknown) {
   if (message.includes("ACTIVITY_THRESHOLD_CONFLICT")) return ["Some members already have progress at or above that threshold. Choose a higher threshold.", 409] as const;
   if (message.includes("ACTIVITY_INVALID")) return ["Choose a valid loyalty activity.", 400] as const;
   if (message.includes("ACTIVITY_SETTINGS_CHANGED")) return ["This activity's reward settings changed. Scan the refreshed customer card again.", 409] as const;
+  if (message.includes("SCAN_COUNT_INTEGRITY")) return ["This member's scan-count history needs administrator review.", 409] as const;
   if (message.includes("INVALID_INPUT")) return ["Check the information and try again.", 400] as const;
   return ["The request could not be completed.", 500] as const;
 }
@@ -267,6 +277,25 @@ Deno.serve(async request => {
       const customerLimit=boundedInteger(body.customerLimit,250,1,500);
       const customerOffset=boundedInteger(body.customerOffset,0,0,1000000);
       return json(await rpc("owner_dashboard",{p_actor:actor,p_customer_limit:customerLimit,p_customer_offset:customerOffset}),200,origin);
+    }
+    if (action === "owner-member-search") {
+      const phone=normalizePhoneSearch(body.phone);
+      return json(await rpc("owner_search_members",{p_actor:actor,p_phone_query:phone}),200,origin);
+    }
+    if (action === "owner-set-scan-count") {
+      const customerId=validUuid(body.customerId);
+      const targetCount=Number(body.targetCount);
+      const reason=String(body.reason || "").trim();
+      if (!Number.isSafeInteger(targetCount) || targetCount<0 || reason.length<3 || reason.length>500) throw new Error("INVALID_INPUT");
+      const result=await rpc("owner_set_scan_count",{p_actor:actor,p_customer_id:customerId,p_target_count:targetCount,p_reason:reason}); const row=result[0];
+      return json({
+        correctionId:row.correction_id,action:row.action,customerId:row.customer_id,
+        displayName:row.display_name,memberCode:row.member_code,
+        recordedScanCount:Number(row.recorded_scan_count),beforeCount:Number(row.before_count),
+        afterCount:Number(row.after_count),delta:Number(row.delta),reason:row.reason,
+        actorUserId:row.actor_user_id,actorDisplayName:row.actor_display_name,
+        branchName:row.branch_name,occurredAt:row.occurred_at
+      },201,origin);
     }
     if (action === "owner-update-activity-settings") {
       const selectedActivity=activitySlug(body.activitySlug,false);

@@ -25,6 +25,8 @@ Each card has its own points, reward rule, last scan and short-lived QR. The sta
 - A customer may request a reward, but only authenticated staff can scan the current activity QR, confirm the redemption and atomically deduct one available reward.
 - Duplicate point confirmation is prevented by both an idempotency key and a database uniqueness rule.
 - PIN recovery requires a one-use, 15-minute code issued after in-person staff verification. The customer chooses the replacement PIN privately.
+- Signed-in staff can search by at least four phone digits to verify a member's full number, display name, member code, status, balances and scan history. The ordinary member list remains masked.
+- Scan totals can be corrected only through an append-only owner audit record with a required reason and explicit confirmation. The recorded scan history, points and rewards are never deleted or changed by this correction.
 - Direct anonymous and ordinary authenticated access to every public table/function is revoked. The Edge Function is the only data boundary.
 - Admin authorization requires Supabase email/password sign-in and is checked against an active `operator_profiles` owner row for every privileged action. Public Supabase Auth signup and anonymous sign-in are disabled.
 
@@ -140,10 +142,16 @@ After Pages updates, verify:
 ## PIN recovery
 
 1. Staff verifies the customer in person.
-2. From the dashboard member row, staff selects **Reset PIN**.
+2. Staff searches the phone number in **Find a member**, verifies the matching name and member code, then selects **Reset PIN**.
 3. The verified customer scans the displayed recovery QR or receives the one-time code directly.
 4. The customer opens the prefilled recovery screen (or **Passport → Use a reset code**) and chooses a new PIN.
 5. Successful recovery revokes all old customer sessions and QR credentials.
+
+## Member lookup and scan correction
+
+The owner dashboard accepts UAE formats such as `05…`, `5…`, `971…` and the last four or more digits. Results are limited to 20 and expose the full phone only after owner authentication. A result shows both the immutable recorded accepted-scan count and the effective corrected count.
+
+To remove an erroneous scan from reporting or set the correct total, expand **Correct scan count**, enter the target total and a clear reason, check the confirmation, and approve the final prompt. This adds a correction ledger row containing the recorded count, before/after values, delta, owner, branch, reason and Dubai timestamp. It does not delete scan events or alter loyalty points or available rewards.
 
 ## Reward rules
 
@@ -164,6 +172,7 @@ The employee guide is English-only. The customer poster remains bilingual:
 - [Employee Guide — PDF](docs/X-Group-Employee-Guide-English.pdf)
 - [Customer Loyalty Poster — PDF](docs/X-Group-Loyalty-Poster-Bilingual.pdf)
 - [Customer Loyalty Poster — PNG](docs/X-Group-Loyalty-Poster-Bilingual.png)
+- [Customer Loyalty Poster — print-ready 300 DPI PNG](docs/X-Group-Loyalty-Poster-Bilingual-300DPI.png)
 
 ## Local preview
 
