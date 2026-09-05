@@ -21,6 +21,14 @@ const SCAN_TOKEN_MINUTES = 5;
 const DEFAULT_RESET_MINUTES = 15;
 const DEFAULT_ACTIVITY = "laser-tag";
 const ACTIVITY_SLUGS = new Set(["laser-tag", "bowling", "escape-room", "billiard", "gaming", "others"]);
+const ACTIVITY_QR_COLORS: Record<string, string> = {
+  "laser-tag": "#8F1542",
+  "bowling": "#5B4600",
+  "escape-room": "#8A2E22",
+  "billiard": "#0D6B4C",
+  "gaming": "#204D8A",
+  "others": "#5C2E80"
+};
 const DUMMY_PIN_SALT = "login-timing-equalizer-v1";
 
 function cors(origin: string | null) {
@@ -260,7 +268,7 @@ Deno.serve(async request => {
         p_activity_slug:selectedActivity,p_scan_token_hash:await sha256(scanToken),p_scan_token_expiry:scanTokenExpiresAt
       }); const row=result[0];
       const payload=`${SITE_ORIGIN}${SITE_BASE_PATH}/#/scan/${scanToken}`;
-      const qrSvg=await QRCode.toString(payload,{type:"svg",errorCorrectionLevel:"M",margin:2,color:{dark:"#650FFD",light:"#ffffff"}});
+      const qrSvg=await QRCode.toString(payload,{type:"svg",errorCorrectionLevel:"M",margin:4,color:{dark:ACTIVITY_QR_COLORS[selectedActivity],light:"#ffffff"}});
       return json({
         displayName:row.display_name,memberCode:row.member_code,
         selectedActivity:{slug:row.activity_slug,name:row.activity_name,settingsVersion:row.activity_settings_version},activityBalances:row.activity_balances,

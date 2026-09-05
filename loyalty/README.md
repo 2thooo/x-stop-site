@@ -42,10 +42,10 @@ The bare `/loyalty/` URL redirects into the Passport route, making it the stable
 ## Venue booking and location routes
 
 - X Entertainment RAK Mall — Laser Tag, Bowling, Escape Room, Billiard, PC & PlayStation, Others — RAK Mall, Al Qurum, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=12180427487395956802)
-- Masters Bowling — Bowling — Opposite Naeem Mall, Al Nakheel, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=6477996226481961738)
+- Masters Bowling — Bowling, Billiard — Opposite Naeem Mall, Al Nakheel, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=6477996226481961738)
 - Expert Billiards — Billiard — LULU Buhairah, 1st Floor, Al Majaz 3, Sharjah — `+971 58 624 9734` — [Map](https://www.google.com/maps?cid=21444396744758821)
 
-The numbers, addresses, activity availability and direct map links are centralized in `config.js`. Bowling offers separate WhatsApp actions for X Entertainment and Masters Bowling; Billiard offers X Entertainment and Expert Billiards. Laser Tag is available only at X Entertainment, while Expert Billiards never appears for Bowling, Escape Room or Laser Tag. The supplied Masters Bowling WhatsApp number differs from the current Google listing, so confirm that routing number before printing permanent signage.
+The numbers, addresses, activity availability and direct map links are centralized in `config.js`. Bowling offers separate WhatsApp actions for X Entertainment and Masters Bowling; Billiard offers X Entertainment, Masters Bowling and Expert Billiards. Laser Tag is available only at X Entertainment, while Expert Billiards never appears for Bowling, Escape Room or Laser Tag. The supplied Masters Bowling WhatsApp number differs from the current Google listing, so confirm that routing number before printing permanent signage.
 
 ## Architecture
 

@@ -50,7 +50,7 @@ test("activity bookings follow the approved venue availability matrix", () => {
   assert.deepEqual(venueSlugsFor("escape-room"), ["x-entertainment"]);
   assert.deepEqual(venueSlugsFor("gaming"), ["x-entertainment"]);
   assert.deepEqual(venueSlugsFor("others"), ["x-entertainment"]);
-  assert.deepEqual(venueSlugsFor("billiard"), ["x-entertainment", "expert-billiards"]);
+  assert.deepEqual(venueSlugsFor("billiard"), ["x-entertainment", "master-bowling", "expert-billiards"]);
 
   const venues = configuredVenues();
   const expert = venues.find(venue => venue.slug === "expert-billiards");
@@ -65,6 +65,37 @@ test("compact booking cards remain in a side-by-side mobile rail", () => {
   assert.match(styles, /grid-auto-flow:\s*column/);
   assert.match(styles, /scroll-snap-type:\s*x mandatory/);
   assert.match(styles, /\.venue-visual\s*\{[^}]*height:\s*118px/s);
+});
+
+test("passport keeps the activity QR branded, compact and scan-safe", () => {
+  const memberStart = app.indexOf("async function memberView");
+  const memberEnd = app.indexOf("function ownerView", memberStart);
+  const member = app.slice(memberStart, memberEnd);
+
+  assert.doesNotMatch(member, /location-chip/);
+  assert.match(member, /passport-booking-link/);
+  assert.match(member, /activity-theme-\$\{selected\.slug\}/);
+  assert.match(member, /class="qr-brand-logo"[^>]*src="assets\/x-group-logo\.jpg"/);
+  assert.match(member, /class="qr-brand-activity"/);
+  assert.match(member, /class="qr-wrap">\$\{data\.qrSvg \|\| ""\}<\/div>/);
+  assert.match(styles, /\.qr-wrap\s*\{[^}]*background:\s*white/s);
+  assert.match(styles, /\.activity-theme-billiard\s*\{/);
+  assert.match(styles, /\.passport-booking-link\s*\{[^}]*min-height:\s*44px/s);
+  assert.match(styles, /@media \(max-width:\s*900px\)[\s\S]*\.member-grid \.qr-panel\s*\{\s*order:\s*-1;/);
+  assert.doesNotMatch(styles, /\.member-card\s*\{[^}]*min-height:\s*430px/s);
+  assert.match(edge, /const ACTIVITY_QR_COLORS:[\s\S]*"billiard": "#0D6B4C"/);
+  assert.match(edge, /QRCode\.toString\(payload,[^\n]*errorCorrectionLevel:"M",margin:4[^\n]*ACTIVITY_QR_COLORS\[selectedActivity\]/);
+
+  const colorBlock = edge.match(/const ACTIVITY_QR_COLORS:[\s\S]*?\n};/)?.[0] || "";
+  const colors = [...colorBlock.matchAll(/#[0-9A-F]{6}/g)].map(match => match[0]);
+  assert.equal(colors.length, 6);
+  for (const color of colors) {
+    const channels = [1, 3, 5].map(index => Number.parseInt(color.slice(index, index + 2), 16) / 255)
+      .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+    const luminance = .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+    const contrastAgainstWhite = 1.05 / (luminance + .05);
+    assert.ok(contrastAgainstWhite >= 4.5, `${color} must retain strong contrast against the white QR background`);
+  }
 });
 
 test("English and Arabic can be toggled without changing routes", () => {
