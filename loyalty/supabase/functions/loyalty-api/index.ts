@@ -18,7 +18,6 @@ const COUNTRY_CODE = Deno.env.get("DEFAULT_COUNTRY_CODE") || "971";
 const SESSION_DAYS = 30;
 const MAX_BODY_BYTES = 12000;
 const SCAN_TOKEN_MINUTES = 5;
-const DEFAULT_INVITE_MINUTES = 24 * 60;
 const DEFAULT_RESET_MINUTES = 15;
 const DEFAULT_ACTIVITY = "laser-tag";
 const ACTIVITY_SLUGS = new Set(["laser-tag", "bowling", "escape-room", "billiard", "gaming", "others"]);
@@ -144,6 +143,12 @@ async function enforcePbkdfBudget(request: Request) {
   if (allowed!==true) throw new Error("AUTH_BLOCKED");
 }
 
+async function enforceEnrollmentBudget(request: Request) {
+  const ipHash=await sha256(`enroll:ip:${clientAddress(request)}`);
+  const allowed=await rpc("consume_auth_budget",{p_identifier_hash:ipHash,p_limit:20,p_window_seconds:3600});
+  if (allowed!==true) throw new Error("ENROLLMENT_BLOCKED");
+}
+
 async function verifyOwner(request: Request) {
   if (!SERVICE_KEY) throw new Error("BACKEND_NOT_CONFIGURED");
   const bearer = request.headers.get("Authorization") || "";
@@ -160,7 +165,8 @@ function publicError(error: unknown) {
   if (message.includes("REQUEST_TOO_LARGE")) return ["Request too large.", 413] as const;
   if (message.includes("INVALID_JSON")) return ["Send a valid JSON object.", 400] as const;
   if (message.includes("ACCOUNT_EXISTS")) return ["An account already exists for that phone number.", 409] as const;
-  if (message.includes("INVITE_INVALID")) return ["This enrollment invitation is invalid, expired, or already used.", 400] as const;
+  if (message.includes("MEMBER_CODE_UNAVAILABLE")) return ["A unique member code could not be created. Please try again.", 503] as const;
+  if (message.includes("ENROLLMENT_BLOCKED")) return ["Too many new accounts were created from this connection. Try again later.", 429] as const;
   if (message.includes("AUTH_BLOCKED")) return ["Too many attempts. Try again in 15 minutes.", 429] as const;
   if (message.includes("LOGIN_FAILED")) return ["Phone number or PIN is incorrect.", 401] as const;
   if (message.includes("OWNER_REQUIRED")) return ["Owner authorization is required.", 403] as const;
@@ -200,10 +206,10 @@ Deno.serve(async request => {
     if (action === "enroll") {
       if (body.consent !== true || !/^\d{6}$/.test(String(body.pin || "")) || !String(body.displayName || "").trim() || String(body.displayName).length > 60) throw new Error("INVALID_INPUT");
       const phone = normalizePhone(body.phone); const pin = String(body.pin); const salt = randomToken(18);
-      const inviteCode = opaqueCode(body.inviteCode);
+      await enforceEnrollmentBudget(request);
       await enforcePbkdfBudget(request);
-      const qrToken = randomToken(); const sessionToken = randomToken(); const memberCode = `M-${randomToken(7).toUpperCase()}`;
-      const result = await rpc("enroll_customer", { p_phone:phone, p_display_name:String(body.displayName).trim(), p_pin_salt:salt, p_pin_hash:await pinHash(pin,salt), p_member_code:memberCode, p_qr_hash:await sha256(qrToken), p_session_hash:await sha256(sessionToken), p_session_expiry:new Date(Date.now()+SESSION_DAYS*86400000).toISOString(), p_invite_hash:await sha256(inviteCode) });
+      const qrToken = randomToken(); const sessionToken = randomToken();
+      const result = await rpc("enroll_customer_open", { p_phone:phone, p_display_name:String(body.displayName).trim(), p_pin_salt:salt, p_pin_hash:await pinHash(pin,salt), p_qr_hash:await sha256(qrToken), p_session_hash:await sha256(sessionToken), p_session_expiry:new Date(Date.now()+SESSION_DAYS*86400000).toISOString() });
       return json({ sessionToken, qrToken, memberCode: result[0].member_code },201,origin);
     }
 
@@ -268,14 +274,6 @@ Deno.serve(async request => {
       if (!Number.isInteger(pointsPerVisit) || pointsPerVisit<1 || pointsPerVisit>20 || !Number.isInteger(rewardThreshold) || rewardThreshold<2 || rewardThreshold>1000 || !rewardText || rewardText.length>200) throw new Error("INVALID_INPUT");
       const result=await rpc("owner_update_activity_settings",{p_actor:actor,p_activity_slug:selectedActivity,p_points_per_visit:pointsPerVisit,p_reward_threshold:rewardThreshold,p_reward_text:rewardText}); const row=result[0];
       return json({activity:{slug:row.activity_slug,name:row.activity_name},pointsPerVisit:row.points_per_visit,rewardThreshold:row.reward_threshold,rewardText:row.reward_text,settingsVersion:row.settings_version},200,origin);
-    }
-    if (action === "owner-create-enrollment-invite") {
-      const minutes=boundedMinutes(body.expiresInMinutes,DEFAULT_INVITE_MINUTES,7*24*60);
-      const inviteCode=randomToken(32); const expiresAt=new Date(Date.now()+minutes*60000).toISOString();
-      const invitePayload=`${SITE_ORIGIN}${SITE_BASE_PATH}/#/join/${inviteCode}`;
-      const inviteQrSvg=await QRCode.toString(invitePayload,{type:"svg",errorCorrectionLevel:"M",margin:2,color:{dark:"#650FFD",light:"#ffffff"}});
-      const result=await rpc("owner_create_enrollment_invite",{p_actor:actor,p_code_hash:await sha256(inviteCode),p_expires_at:expiresAt});
-      return json({inviteId:result[0].invite_id,inviteCode,inviteQrSvg,expiresAt:result[0].expires_at},201,origin);
     }
     if (action === "owner-create-pin-reset") {
       const customerId=body.customerId ? validUuid(body.customerId) : null;

@@ -15,7 +15,7 @@ This checklist is part of deployment, not optional documentation. Complete it in
 - Use long, unique owner passwords. If MFA is enabled, verify that the actual sign-in flow enforces it before describing the site as MFA-protected.
 - Review activity reward rules and customer-facing wording for all six activities.
 - Have privacy, retention, data-subject-request and cross-border hosting choices reviewed for applicable UAE requirements.
-- Define who can verify customers in person before issuing enrollment or PIN-reset codes.
+- Define who verifies a customer before the first point award or a PIN-reset code is issued.
 - Test enrollment, login, recovery, scan, cancel, point award, reward redemption, expiry, replay and concurrent confirmation.
 - Test installation and camera behavior on real iPhone and Samsung devices.
 - Define a database backup/export schedule appropriate to the business; do not assume free-tier backups meet it.
@@ -41,7 +41,7 @@ Anonymous and ordinary authenticated roles must not be able to call the database
 
 ## Required abuse-path tests
 
-1. Reuse an enrollment code: the second enrollment must fail.
+1. Register without a join code, confirm that a unique random member code is generated, then confirm duplicate-phone registration fails and enrollment throttling activates.
 2. Scan the same QR twice: the second scan must fail even if it occurs immediately or concurrently.
 3. Wait beyond five minutes: scanning the old code must fail as expired.
 4. Confirm the same scan twice with different idempotency keys: only one point event may exist.
@@ -56,7 +56,7 @@ Anonymous and ordinary authenticated roles must not be able to call the database
 
 ## Enrollment and phone-number limitation
 
-The app deliberately avoids SMS fees and does not send OTPs. An owner-issued enrollment code limits public account squatting, but it does not cryptographically prove that the applicant owns the entered phone number. Staff must check the number in person before issuing the code. Add a verified OTP provider later if remote enrollment or recovery is required.
+The app deliberately avoids SMS fees and does not send OTPs. Registration is public and rate-limited, but it does not prove that the applicant owns the entered phone number. Someone could reserve another person's phone number or create fabricated accounts. Staff must verify the customer before awarding the first points, and a verified OTP provider should be added later if stronger ownership proof is required.
 
 ## QR handling
 
@@ -76,7 +76,7 @@ An accepted staff scan consumes the one-time token before point/reward confirmat
 1. Change the owner's password immediately.
 2. Revoke that user's active Supabase Auth sessions.
 3. Set `operator_profiles.is_active=false` for the affected user.
-4. Review recent enrollment-code, reset-code, scan, point and redemption activity.
+4. Review recent registration, reset-code, scan, point and redemption activity.
 5. Create a new named owner user if the device/account cannot be trusted.
 6. Re-enable the profile only after the device and account are secured.
 

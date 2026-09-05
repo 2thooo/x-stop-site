@@ -1,4 +1,4 @@
-const CACHE = "x-group-passport-v8";
+const CACHE = "x-group-passport-v9";
 const SHELL = [
   "./", "./index.html", "./styles.css", "./config.js", "./src/app.js", "./src/api.js", "./src/core.js", "./src/vendor/jsQR.js", "./manifest.webmanifest",
   "./assets/icon-192.png", "./assets/icon-512.png", "./assets/icon-maskable-512.png", "./assets/apple-touch-icon.png", "./assets/x-group-logo.jpg",

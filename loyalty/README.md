@@ -11,11 +11,12 @@ The customer experience is one X Group Passport with six independent activity ca
 - PC & PlayStation
 - Others
 
-Each card has its own points, reward rule, last scan and short-lived QR. The staff dashboard keeps raw scans separate from confirmed point awards and shows up to 1,000 recent accepted events in Dubai time. A dark, venue-first booking screen combines original activity visuals with direct WhatsApp, Call and Google Maps actions for X Entertainment, Masters Bowling and Expert Billiards.
+Each card has its own points, reward rule, last scan and short-lived QR. The staff dashboard keeps raw scans separate from confirmed point awards and shows up to 1,000 recent accepted events in Dubai time. A compact dark booking panel presents all three venues side by side with direct WhatsApp, phone and Google Maps actions.
 
 ## Security and product behavior
 
-- New accounts require an owner-generated, one-use enrollment code.
+- Customers register directly; no join code is requested.
+- The database automatically creates a non-sequential member code such as `X-7A4C-9F2E-D681-3B05`; uniqueness is enforced and rare collisions are retried.
 - Customers sign in with a UAE-normalized phone number and a six-digit PIN.
 - PINs use PBKDF2-SHA-256 with a unique salt; readable PINs are never stored.
 - Customer sessions and QR credentials are stored in the database only as SHA-256 hashes.
@@ -26,7 +27,7 @@ Each card has its own points, reward rule, last scan and short-lived QR. The sta
 - Direct anonymous and ordinary authenticated access to every public table/function is revoked. The Edge Function is the only data boundary.
 - Admin authorization requires Supabase email/password sign-in and is checked against an active `operator_profiles` owner row for every privileged action. Public Supabase Auth signup and anonymous sign-in are disabled.
 
-The website does **not** send an OTP, so it does not independently prove ownership of the customer phone number. Staff should verify the number in person before issuing an enrollment or reset code.
+The website does **not** send an OTP, so it does not independently prove ownership of the customer phone number. Staff should verify the customer before awarding the first points or issuing a PIN-reset code. Direct registration is rate-limited, but an OTP remains the correct future control for proving phone ownership.
 
 ## Live entry points
 
@@ -37,7 +38,7 @@ The bare `/loyalty/` URL redirects into the Passport route, making it the stable
 
 ## Venue booking and location routes
 
-- X Entertainment — Laser Tag, Escape Room, PC & PlayStation, Others — RAK Mall, Al Qurum, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=12180427487395956802)
+- X Entertainment RAK Mall — Laser Tag, Escape Room, PC & PlayStation, Others — RAK Mall, Al Qurum, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=12180427487395956802)
 - Masters Bowling — Bowling — Opposite Naeem Mall, Al Nakheel, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=6477996226481961738)
 - Expert Billiards — Billiard — LULU Buhairah, 1st Floor, Al Majaz 3, Sharjah — `+971 58 624 9734` — [Map](https://www.google.com/maps?cid=21444396744758821)
 
@@ -128,8 +129,8 @@ After Pages updates, verify:
 
 ## Customer flow
 
-1. Staff signs in and creates a one-use join code after checking the customer in person.
-2. The customer scans the displayed enrollment QR (or copies the code), then enters their name, UAE phone number and a private six-digit PIN.
+1. The customer enters their first name, UAE phone number and a private six-digit PIN—no join code is needed.
+2. The database assigns a random, non-enumerable member code with no small numeric ceiling.
 3. The customer selects one of the six activity cards.
 4. The app creates a one-use QR for that exact activity, valid for five minutes.
 5. Staff scans, verifies the member and activity, then confirms points, redeems an available reward or records no transaction.
@@ -174,7 +175,7 @@ node --check src/api.js
 node --check src/core.js
 ```
 
-The eleven included tests cover UAE/international phone normalization, PIN shape, HTML escaping and QR parsing. They are not a substitute for testing the migration, RLS, Edge Function, camera permissions and complete customer/staff flow against a dedicated Supabase test project.
+The included tests cover UAE/international phone normalization, PIN shape, HTML escaping, QR parsing and key registration/booking contracts. They are not a substitute for testing the migration, RLS, Edge Function, camera permissions and complete customer/staff flow against a dedicated Supabase test project.
 
 Before production, follow [SECURITY.md](SECURITY.md), test replay/expiry/concurrency paths on real iPhone and Samsung devices, and have the privacy/retention wording reviewed for the business's UAE obligations.
 
