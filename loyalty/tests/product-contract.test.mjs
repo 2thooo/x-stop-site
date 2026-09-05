@@ -30,6 +30,11 @@ test("customer registration does not request or send a join code", () => {
   assert.doesNotMatch(edge, /owner-create-enrollment-invite|p_invite_hash/);
 });
 
+test("wallet information is not displayed in the customer interface", () => {
+  assert.doesNotMatch(app, /home\.noWallet|Apple Wallet|Samsung Wallet|Add to Wallet/i);
+  assert.doesNotMatch(i18n, /home\.noWallet|Apple Wallet|Samsung Wallet|Add to Wallet/i);
+});
+
 test("member codes are random, non-enumerable and collision guarded", () => {
   assert.match(migration, /gen_random_bytes\(8\)/);
   assert.match(migration, /v_attempt >= 5/);
