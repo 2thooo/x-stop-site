@@ -5,6 +5,7 @@ import { readFileSync, readdirSync } from "node:fs";
 const edge = readFileSync(new URL("../supabase/functions/loyalty-api/index.ts", import.meta.url), "utf8");
 const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
 const i18n = readFileSync(new URL("../src/i18n.js", import.meta.url), "utf8");
+const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 const migrationsDirectory = new URL("../supabase/migrations/", import.meta.url);
 const migrations = readdirSync(migrationsDirectory)
   .filter(name => name.endsWith(".sql"))
@@ -114,6 +115,12 @@ test("owner dashboard supports search, PIN reset, and confirmed scan-count corre
   assert.match(app, /member-search-reset/);
   assert.match(app, /if \(resetButton\) createResetCode\(resetButton\)/);
   assert.match(app, /memberCorrectionHistory\(member\.scanCorrections\)/);
+  assert.match(app, /member-reset-help/);
+  assert.match(app, /ownerMemberSearchState\.status !== "success"/);
+  assert.match(app, /query\.length < 4[\s\S]{0,250}status: "idle"[\s\S]{0,150}renderMemberSearchResults\(\)/);
+  assert.match(css, /correction-history summary[^}]*min-height:\s*44px/);
+  assert.match(css, /summary::after[^}]*content:/);
+  assert.match(css, /\[open\] summary::after/);
   assert.match(app, /name="targetCount"/);
   assert.match(app, /name="reason"/);
   assert.match(app, /name="targetCount"[^>]*min="0"|min="0"[^>]*name="targetCount"/);

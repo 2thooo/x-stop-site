@@ -294,8 +294,9 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--accent), 
 .member-search-empty { margin: 0 !important; }
 .member-search-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .member-search-actions .button { min-height: 44px; }
+.member-reset-help { flex-basis: 100%; margin: 0; color: var(--muted); font-size: .68rem; line-height: 1.45; }
 .correction-history { margin-top: 12px; border-top: 1px solid var(--line); }
-.correction-history summary { min-height: 42px; display: flex; align-items: center; color: #cdbbe3; font-size: .74rem; font-weight: 700; cursor: pointer; }
+.correction-history summary { min-height: 44px; display: flex; align-items: center; color: #cdbbe3; font-size: .74rem; font-weight: 700; cursor: pointer; }
 .correction-history-list { display: grid; gap: 7px; padding: 0 0 8px; }
 .correction-history-list article { padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.025); }
 .correction-history-list article > div { display: flex; justify-content: space-between; gap: 10px; }
@@ -304,7 +305,10 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--accent), 
 .correction-history-list p { margin: 6px 0 4px; color: #e7dfed; font-size: .7rem; line-height: 1.45; overflow-wrap: anywhere; }
 .scan-correction { margin-top: 14px; border-top: 1px solid var(--line); }
 .scan-correction summary { min-height: 44px; display: flex; align-items: center; color: #d7c4ef; font-size: .78rem; font-weight: 700; cursor: pointer; }
-.scan-correction summary::marker { color: var(--accent); }
+.correction-history summary, .scan-correction summary { list-style: none; }
+.correction-history summary::-webkit-details-marker, .scan-correction summary::-webkit-details-marker { display: none; }
+.correction-history summary::after, .scan-correction summary::after { content: "\203A"; margin-inline-start: auto; color: var(--accent); font-size: 1.25rem; line-height: 1; transition: transform .16s ease; }
+.correction-history[open] summary::after, .scan-correction[open] summary::after { transform: rotate(90deg); }
 .scan-correction-body { padding-top: 4px; }
 .correction-safety-note { display: grid; gap: 3px; padding: 12px; border: 1px solid rgba(255,210,26,.42); border-radius: 13px; color: #ffe981; background: rgba(255,210,26,.09); }
 .correction-safety-note strong { font-size: .75rem; }

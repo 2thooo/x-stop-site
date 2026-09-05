@@ -25,7 +25,7 @@ let scanLookupInFlight = false;
 let renderGeneration = 0;
 let ownerAccessToken = null;
 let pendingScanToken = "";
-let ownerMemberSearchState = { query: "", members: null };
+let ownerMemberSearchState = { query: "", members: null, status: "idle" };
 
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
@@ -272,7 +272,7 @@ function phoneSearchDigits(value) {
 function ownerSessionEnded(error) {
   if (error?.status !== 401 && error?.status !== 403) return false;
   ownerAccessToken = null;
-  ownerMemberSearchState = { query: "", members: null };
+  ownerMemberSearchState = { query: "", members: null, status: "idle" };
   showToast(t("dashboard.sessionExpired"));
   location.hash = "#/admin";
   return true;
@@ -300,7 +300,7 @@ function memberBalanceCards(balances) {
 function memberCorrectionHistory(corrections) {
   const list = Array.isArray(corrections) ? corrections.slice(0, 5) : [];
   if (!list.length) return "";
-  return `<details class="correction-history"><summary>${escapeHtml(t("dashboard.correctionsTitle"))}</summary><div class="correction-history-list">${list.map(correction => {
+  return `<details class="correction-history"><summary><span>${escapeHtml(t("dashboard.correctionsTitle"))}</span></summary><div class="correction-history-list">${list.map(correction => {
     const actor = String(correction.actorDisplayName || t("dashboard.unknownStaff"));
     return `<article><div><strong><bdi dir="ltr">${safeNumber(correction.beforeCount)} → ${safeNumber(correction.afterCount)}</bdi></strong><span>${escapeHtml(formatDubaiDateTime(correction.occurredAt))}</span></div><p>${escapeHtml(correction.reason || "")}</p><small>${escapeHtml(t("dashboard.correctedBy", { actor }))}</small></article>`;
   }).join("")}</div></details>`;
@@ -325,21 +325,21 @@ function memberSearchCard(member) {
     <div class="member-search-head"><div><p class="member-search-code"><bdi dir="ltr">${escapeHtml(memberCode)}</bdi></p><h4>${escapeHtml(nameAndUsername)}</h4>${phoneMarkup}</div><span class="member-status ${status === "active" ? "is-active" : ""}">${escapeHtml(memberStatusLabel(status))}</span></div>
     <dl class="member-facts"><div><dt>${escapeHtml(t("dashboard.nameUsername"))}</dt><dd>${escapeHtml(nameAndUsername)}</dd></div><div><dt>${escapeHtml(t("dashboard.memberCode"))}</dt><dd><bdi dir="ltr">${escapeHtml(memberCode)}</bdi></dd></div><div><dt>${escapeHtml(t("dashboard.effectiveScans"))}</dt><dd><bdi dir="ltr">${effectiveCount}</bdi></dd></div><div><dt>${escapeHtml(t("dashboard.recordedScans"))}</dt><dd><bdi dir="ltr">${recordedCount}</bdi></dd></div><div><dt>${escapeHtml(t("dashboard.lastScan"))}</dt><dd>${escapeHtml(formatDubaiDateTime(member.lastScannedAt))}</dd></div><div><dt>${escapeHtml(t("dashboard.created"))}</dt><dd>${escapeHtml(formatDubaiDateTime(member.createdAt))}</dd></div></dl>
     <div class="member-balance-section"><h5>${escapeHtml(t("dashboard.activityBalances"))}</h5>${memberBalanceCards(member.activityBalances)}</div>
-    <div class="member-search-actions"><button class="button ghost member-search-reset" type="button" data-customer-id="${escapeHtml(customerId)}"${resetDisabled ? ` disabled title="${escapeHtml(t("dashboard.resetUnavailable"))}"` : ""}>${escapeHtml(t("dashboard.resetPin"))}</button></div>
+    <div class="member-search-actions"><button class="button ghost member-search-reset" type="button" data-customer-id="${escapeHtml(customerId)}"${resetDisabled ? " disabled" : ""}>${escapeHtml(t("dashboard.resetPin"))}</button>${resetDisabled ? `<p class="member-reset-help">${escapeHtml(t("dashboard.resetUnavailable"))}</p>` : ""}</div>
     ${memberCorrectionHistory(member.scanCorrections)}
-    <details class="scan-correction"><summary>${escapeHtml(t("dashboard.correctScans"))}</summary><div class="scan-correction-body"><div class="correction-safety-note" role="note"><strong>${escapeHtml(t("dashboard.correctionSafetyTitle"))}</strong><span>${escapeHtml(t("dashboard.correctionNote"))}</span></div><p class="hint">${escapeHtml(t("dashboard.correctionCurrent", { effective: effectiveCount, recorded: recordedCount }))}</p><form class="compact-form scan-correction-form" data-customer-id="${escapeHtml(customerId)}" data-member-name="${escapeHtml(displayName)}" data-current-count="${effectiveCount}"><div class="field"><label>${escapeHtml(t("dashboard.correctionTarget"))}<input class="ltr-input" name="targetCount" type="number" min="0" step="1" value="${effectiveCount}" required /></label></div><div class="field"><label>${escapeHtml(t("dashboard.correctionReason"))}<textarea name="reason" dir="auto" minlength="3" maxlength="500" placeholder="${escapeHtml(t("dashboard.correctionReasonPlaceholder"))}" required></textarea></label></div><label class="check-row correction-confirm"><input name="confirmCorrection" type="checkbox" required /><span>${escapeHtml(t("dashboard.correctionConfirm"))}</span></label><p class="form-error correction-error" role="alert"></p><button class="button secondary" type="submit">${escapeHtml(t("dashboard.correctionSubmit"))}</button></form></div></details>
+    <details class="scan-correction"><summary><span>${escapeHtml(t("dashboard.correctScans"))}</span></summary><div class="scan-correction-body"><div class="correction-safety-note" role="note"><strong>${escapeHtml(t("dashboard.correctionSafetyTitle"))}</strong><span>${escapeHtml(t("dashboard.correctionNote"))}</span></div><p class="hint">${escapeHtml(t("dashboard.correctionCurrent", { effective: effectiveCount, recorded: recordedCount }))}</p><form class="compact-form scan-correction-form" data-customer-id="${escapeHtml(customerId)}" data-member-name="${escapeHtml(displayName)}" data-current-count="${effectiveCount}"><div class="field"><label>${escapeHtml(t("dashboard.correctionTarget"))}<input class="ltr-input" name="targetCount" type="number" min="0" step="1" value="${effectiveCount}" required /></label></div><div class="field"><label>${escapeHtml(t("dashboard.correctionReason"))}<textarea name="reason" dir="auto" minlength="3" maxlength="500" placeholder="${escapeHtml(t("dashboard.correctionReasonPlaceholder"))}" required></textarea></label></div><label class="check-row correction-confirm"><input name="confirmCorrection" type="checkbox" required /><span>${escapeHtml(t("dashboard.correctionConfirm"))}</span></label><p class="form-error correction-error" role="alert"></p><button class="button secondary" type="submit">${escapeHtml(t("dashboard.correctionSubmit"))}</button></form></div></details>
   </article>`;
 }
 
 function renderMemberSearchResults(options = {}) {
   const container = document.querySelector("#member-search-results");
   if (!container) return;
-  if (options.loading) {
+  if (options.loading || ownerMemberSearchState.status === "loading") {
     container.innerHTML = `<div class="member-search-feedback">${escapeHtml(t("dashboard.searching"))}</div>`;
     return;
   }
-  if (!ownerMemberSearchState.query) { container.innerHTML = ""; return; }
-  const members = Array.isArray(ownerMemberSearchState.members) ? ownerMemberSearchState.members : [];
+  if (!ownerMemberSearchState.query || ownerMemberSearchState.status !== "success" || !Array.isArray(ownerMemberSearchState.members)) { container.innerHTML = ""; return; }
+  const members = ownerMemberSearchState.members;
   if (!members.length) {
     container.innerHTML = `<div class="member-search-feedback">${escapeHtml(t("dashboard.searchNone"))}</div>`;
     return;
@@ -354,11 +354,13 @@ async function runOwnerMemberSearch(value) {
   if (!form || !errorElement) return;
   errorElement.textContent = "";
   if (query.length < 4) {
+    ownerMemberSearchState = { query: "", members: null, status: "idle" };
+    renderMemberSearchResults();
     errorElement.textContent = t("dashboard.searchMinimum");
     form.elements.phone.focus();
     return;
   }
-  ownerMemberSearchState = { query, members: null };
+  ownerMemberSearchState = { query, members: null, status: "loading" };
   form.elements.phone.value = query;
   setFormBusy(form, true);
   renderMemberSearchResults({ loading: true });
@@ -366,12 +368,12 @@ async function runOwnerMemberSearch(value) {
   try {
     const data = await callApi("owner-member-search", { phone: query }, token);
     if (token !== ownerAccessToken) return;
-    ownerMemberSearchState = { query, members: Array.isArray(data.members) ? data.members : [] };
+    ownerMemberSearchState = { query, members: Array.isArray(data.members) ? data.members : [], status: "success" };
     renderMemberSearchResults();
   } catch (error) {
     if (token !== ownerAccessToken) return;
     if (ownerSessionEnded(error)) return;
-    ownerMemberSearchState = { query, members: null };
+    ownerMemberSearchState = { query, members: null, status: "error" };
     errorElement.textContent = localizeError(error);
     const results = document.querySelector("#member-search-results");
     if (results) results.innerHTML = "";
@@ -417,11 +419,11 @@ async function submitScanCountCorrection(form) {
       try {
         const data = await callApi("owner-member-search", { phone: query }, token);
         if (token !== ownerAccessToken) return;
-        ownerMemberSearchState = { query, members: Array.isArray(data.members) ? data.members : [] };
+        ownerMemberSearchState = { query, members: Array.isArray(data.members) ? data.members : [], status: "success" };
       } catch (error) {
         if (token !== ownerAccessToken) return;
         if (ownerSessionEnded(error)) return;
-        ownerMemberSearchState = { query, members: null };
+        ownerMemberSearchState = { query, members: null, status: "error" };
         refreshError = error;
       }
     }
@@ -480,7 +482,7 @@ async function dashboardView(generation = renderGeneration, customerOffset = 0) 
       <div class="panel history-panel"><div class="panel-head"><div><h3>${escapeHtml(t("dashboard.history"))}</h3><span class="subtle">${escapeHtml(t("dashboard.historyHint"))}</span></div></div><div class="table-wrap"><table><thead><tr><th>${escapeHtml(t("dashboard.thTime"))}</th><th>${escapeHtml(t("dashboard.thMember"))}</th><th>${escapeHtml(t("dashboard.thActivity"))}</th><th>${escapeHtml(t("dashboard.thEvent"))}</th><th>${escapeHtml(t("dashboard.thChange"))}</th><th>${escapeHtml(t("dashboard.thBalance"))}</th></tr></thead><tbody>${(data.recentEvents || []).map(event => `<tr><td>${escapeHtml(formatDubaiDateTime(event.occurredAt))}</td><td>${escapeHtml(event.displayName)}<br><bdi class="hint" dir="ltr">${escapeHtml(event.memberCode)}</bdi></td><td>${escapeHtml(activityName(event.activitySlug))}</td><td>${escapeHtml(eventActionLabel(event.action))}</td><td>${escapeHtml(eventChange(event))}</td><td><bdi dir="ltr">${safeNumber(event.balanceBefore)} → ${safeNumber(event.balanceAfter)}</bdi></td></tr>`).join("") || `<tr><td colspan="6" class="empty">${escapeHtml(t("dashboard.noActivity"))}</td></tr>`}</tbody></table></div></div>
       </section>`;
     settleViewPosition();
-    document.querySelector("#owner-logout")?.addEventListener("click", () => { ownerAccessToken = null; ownerMemberSearchState = { query: "", members: null }; location.hash = "#/"; });
+    document.querySelector("#owner-logout")?.addEventListener("click", () => { ownerAccessToken = null; ownerMemberSearchState = { query: "", members: null, status: "idle" }; location.hash = "#/"; });
     bindOwnerMemberSearch();
     document.querySelectorAll(".reset-pin").forEach(button => button.addEventListener("click", () => createResetCode(button)));
     bindActivitySettings(activitySettings);
