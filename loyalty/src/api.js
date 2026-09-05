@@ -11,13 +11,14 @@ function functionUrl() {
 
 export async function callApi(action, payload = {}, ownerToken = null) {
   if (!isConfigured()) throw new Error("Connect the site to Supabase in config.js first.");
+  const headers = {
+    "Content-Type": "application/json",
+    "apikey": config.supabaseAnonKey
+  };
+  if (ownerToken) headers.Authorization = `Bearer ${ownerToken}`;
   const response = await fetch(functionUrl(), {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": config.supabaseAnonKey,
-      "Authorization": `Bearer ${ownerToken || config.supabaseAnonKey}`
-    },
+    headers,
     body: JSON.stringify({ action, ...payload })
   });
   const data = await response.json().catch(() => ({}));

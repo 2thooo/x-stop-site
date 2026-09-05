@@ -1,2 +1,18 @@
+[auth]
+site_url = "https://2thooo.github.io/x-stop-site/loyalty/"
+additional_redirect_urls = ["https://2thooo.github.io/x-stop-site/loyalty/**"]
+enable_signup = false
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+max_frequency = "1m"
+otp_length = 8
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
 [functions.loyalty-api]
 verify_jwt = false

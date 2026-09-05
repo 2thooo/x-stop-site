@@ -5,14 +5,15 @@ This checklist is part of deployment, not optional documentation. Complete it in
 ## Before launch
 
 - Obtain approval for the chosen Supabase hosting region. Supabase does not currently offer a UAE region.
-- Put only the public publishable/legacy `anon` key in `config.js`.
-- Keep every secret/service-role key in Supabase-managed server secrets only.
+- Put only the modern public publishable key in `config.js`.
+- Keep every secret/service-role key in Supabase-managed server secrets only. The Edge Function prefers the managed `SUPABASE_SECRET_KEYS["default"]` value.
 - Set `SITE_ORIGIN=https://2thooo.github.io` and `SITE_BASE_PATH=/x-stop-site/loyalty` exactly.
+- Keep production CORS restricted to that exact origin. Use a separate Supabase test project for localhost development; do not point a local browser build at production.
 - Keep the built-in iframe refusal enabled. For browser-enforced anti-framing headers, move staff operations to an isolated host that can send a `Content-Security-Policy: frame-ancestors 'none'` response header.
 - Before enrolling real customers, audit every script on the shared `2thooo.github.io` origin or deploy this directory to an isolated origin. URL paths do not isolate `localStorage`, so another compromised same-origin page could read customer bearer credentials.
-- Create separate named Auth users for owners; never share an owner account among staff.
+- Keep public Supabase Auth signup and anonymous sign-in disabled. Create separate named Auth users for admins; never share an admin account among staff.
 - Use long, unique owner passwords. If MFA is enabled, verify that the actual sign-in flow enforces it before describing the site as MFA-protected.
-- Review activity reward rules and customer-facing wording for all five activities.
+- Review activity reward rules and customer-facing wording for all six activities.
 - Have privacy, retention, data-subject-request and cross-border hosting choices reviewed for applicable UAE requirements.
 - Define who can verify customers in person before issuing enrollment or PIN-reset codes.
 - Test enrollment, login, recovery, scan, cancel, point award, reward redemption, expiry, replay and concurrent confirmation.
@@ -79,7 +80,7 @@ An accepted staff scan consumes the one-time token before point/reward confirmat
 5. Create a new named owner user if the device/account cannot be trusted.
 6. Re-enable the profile only after the device and account are secured.
 
-The staff bearer token is kept only in page memory and is never placed in browser storage. Refreshing, closing or navigating away from the loyalty page signs staff out. This does not replace server-side session revocation after loss or compromise. Use the bundled in-app scanner for normal iPhone operation; opening a loyalty QR in a new Camera-app tab requires another staff sign-in.
+The staff bearer token is kept only in page memory and is never placed in browser storage. Refreshing, closing or navigating away from the loyalty page signs staff out. The Admin route is not shown in customer navigation, but its protection comes from Supabase email/password authentication and the active owner profile—not from hiding the URL. This does not replace server-side session revocation after loss or compromise. Use the bundled in-app scanner for normal iPhone operation; opening a loyalty QR in a new Camera-app tab requires another staff sign-in.
 
 ## Customer PIN recovery
 
@@ -101,7 +102,7 @@ If a secret/service-role key is exposed:
 4. Assess whether customer notification or regulatory action is required.
 5. Do not treat removal from Git history as sufficient remediation; an exposed secret is compromised even after deletion.
 
-If the public publishable/`anon` key is exposed, that is expected—it is not a secret. Security still depends on RLS, revoked grants, Edge Function validation and owner authorization. Investigate only if those controls were changed or the key had unintended privilege.
+If the public publishable key is exposed, that is expected—it is not a secret. Security still depends on RLS, revoked grants, Edge Function validation and owner authorization. Investigate only if those controls were changed or the key had unintended privilege.
 
 ## Data retention, backups and recovery
 

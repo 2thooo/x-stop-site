@@ -54,9 +54,10 @@ create table public.loyalty_activities (
 insert into public.loyalty_activities(slug, display_name, sort_order, points_per_visit, reward_threshold, reward_text) values
   ('laser-tag', 'Laser Tag', 1, 1, 10, '10 Laser Tag visits unlock a reward'),
   ('bowling', 'Bowling', 2, 1, 10, '10 Bowling visits unlock a reward'),
-  ('billiard', 'Billiard', 3, 1, 10, '10 Billiard visits unlock a reward'),
-  ('pc', 'PC', 4, 1, 10, '10 PC visits unlock a reward'),
-  ('playstation', 'PlayStation', 5, 1, 10, '10 PlayStation visits unlock a reward');
+  ('escape-room', 'Escape Room', 3, 1, 10, '10 Escape Room visits unlock a reward'),
+  ('billiard', 'Billiard', 4, 1, 10, '10 Billiard visits unlock a reward'),
+  ('gaming', 'PC & PlayStation', 5, 1, 10, '10 PC & PlayStation visits unlock a reward'),
+  ('others', 'Others', 6, 1, 10, '10 visits unlock a reward');
 
 create table public.loyalty_accounts (
   customer_id uuid not null references public.customers(id) on delete restrict,

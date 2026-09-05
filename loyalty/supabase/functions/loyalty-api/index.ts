@@ -1,7 +1,17 @@
 import QRCode from "npm:qrcode@1.5.4";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+function internalApiKey() {
+  const managedKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (managedKeys) {
+    try {
+      const parsed = JSON.parse(managedKeys) as Record<string, string>;
+      if (parsed.default) return parsed.default;
+    } catch { /* Fall through to the legacy managed key. */ }
+  }
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+}
+const SERVICE_KEY = internalApiKey();
 const SITE_ORIGIN = Deno.env.get("SITE_ORIGIN") || "http://localhost:4173";
 const SITE_BASE_PATH = (Deno.env.get("SITE_BASE_PATH") || "").replace(/\/$/, "");
 const COUNTRY_CODE = Deno.env.get("DEFAULT_COUNTRY_CODE") || "971";
@@ -11,19 +21,19 @@ const SCAN_TOKEN_MINUTES = 5;
 const DEFAULT_INVITE_MINUTES = 24 * 60;
 const DEFAULT_RESET_MINUTES = 15;
 const DEFAULT_ACTIVITY = "laser-tag";
-const ACTIVITY_SLUGS = new Set(["laser-tag", "bowling", "billiard", "pc", "playstation"]);
+const ACTIVITY_SLUGS = new Set(["laser-tag", "bowling", "escape-room", "billiard", "gaming", "others"]);
 const DUMMY_PIN_SALT = "login-timing-equalizer-v1";
 
 function cors(origin: string | null) {
-  const allowed = origin === SITE_ORIGIN || /^http:\/\/localhost:\d+$/.test(origin || "");
-  return {
-    "Access-Control-Allow-Origin": allowed ? origin! : SITE_ORIGIN,
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Headers": "authorization, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "no-store"
   };
+  if (origin === SITE_ORIGIN) headers["Access-Control-Allow-Origin"] = SITE_ORIGIN;
+  return headers;
 }
 
 function json(body: unknown, status = 200, origin: string | null = null) {
@@ -112,8 +122,9 @@ function safeEqual(a: string, b: string) {
 }
 
 async function rpc(name: string, body: Record<string, unknown>) {
+  if (!SERVICE_KEY) throw new Error("BACKEND_NOT_CONFIGURED");
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-    method: "POST", headers: { "Content-Type":"application/json", "apikey":SERVICE_KEY, "Authorization":`Bearer ${SERVICE_KEY}` }, body: JSON.stringify(body)
+    method: "POST", headers: { "Content-Type":"application/json", "apikey":SERVICE_KEY }, body: JSON.stringify(body)
   });
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.message || "BACKEND_ERROR");
@@ -134,6 +145,7 @@ async function enforcePbkdfBudget(request: Request) {
 }
 
 async function verifyOwner(request: Request) {
+  if (!SERVICE_KEY) throw new Error("BACKEND_NOT_CONFIGURED");
   const bearer = request.headers.get("Authorization") || "";
   if (!bearer.startsWith("Bearer ") || bearer === `Bearer ${SERVICE_KEY}`) throw new Error("OWNER_REQUIRED");
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { "apikey": SERVICE_KEY, "Authorization": bearer } });
@@ -176,9 +188,9 @@ function publicError(error: unknown) {
 
 Deno.serve(async request => {
   const origin = request.headers.get("Origin");
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(origin) });
+  if (request.method === "OPTIONS") return new Response(null, { status: origin === SITE_ORIGIN ? 204 : 403, headers: cors(origin) });
   if (request.method !== "POST" || !request.headers.get("content-type")?.includes("application/json")) return json({error:"Invalid request."},405,origin);
-  if (origin && origin !== SITE_ORIGIN && !/^http:\/\/localhost:\d+$/.test(origin)) return json({error:"Origin not allowed."},403,origin);
+  if (origin && origin !== SITE_ORIGIN) return json({error:"Origin not allowed."},403,origin);
   if (Number(request.headers.get("content-length") || 0) > MAX_BODY_BYTES) return json({error:"Request too large."},413,origin);
 
   try {

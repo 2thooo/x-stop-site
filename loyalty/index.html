@@ -3,35 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-    <meta name="theme-color" content="#050307" />
-    <meta name="description" content="The activity loyalty passport for X Entertainment RAK Mall." />
+    <meta name="theme-color" content="#08060c" />
+    <meta name="description" content="X Group activity passport, WhatsApp booking and locations for X Entertainment, Masters Bowling and Expert Billiards." />
     <meta name="referrer" content="no-referrer" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.supabase.co; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/icon-192.png" type="image/png" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <link rel="stylesheet" href="styles.css" />
-    <title>X Entertainment Loyalty</title>
+    <title>X Group Activity Passport</title>
   </head>
   <body>
     <a class="skip-link" href="#app">Skip to content</a>
     <header class="site-header">
-      <a class="brand" href="#/" aria-label="Home">
-        <img class="brand-logo" src="assets/x-entertainment-logo.jpg" alt="" width="121" height="100" />
-        <span class="brand-copy"><strong>X Entertainment</strong><span>RAK Mall</span></span>
+      <a class="brand" href="#/passport" aria-label="Open X Group Passport">
+        <img class="brand-logo" src="assets/x-group-logo.jpg" alt="" width="100" height="102" />
+        <span class="brand-copy"><strong>X Group</strong><span>Activity Passport</span></span>
       </a>
       <nav aria-label="Primary navigation">
+        <button class="nav-link" data-route="passport">Passport</button>
+        <button class="nav-link" data-route="book">Book</button>
         <button class="nav-link" data-route="join">Join</button>
-        <button class="nav-link" data-route="login">My passport</button>
-        <button class="nav-link owner-link" data-route="owner">Team</button>
       </nav>
     </header>
 
     <main id="app" tabindex="-1"></main>
 
     <footer>
-      <div><strong data-business-name>X Entertainment RAK Mall</strong><span data-business-address>RAK Mall · Al Qurum · Ras Al Khaimah</span></div>
-      <div class="footer-links"><a data-business-phone href="tel:+971547310073">+971 54 731 0073</a><a href="https://xgroup.ae/" target="_blank" rel="noreferrer">xgroup.ae</a><button class="text-button" data-route="privacy">Privacy</button></div>
+      <div><strong>X Group</strong><span>Entertainment experiences across RAK & Sharjah</span></div>
+      <div class="footer-links"><button class="text-button" data-route="book">Locations & booking</button><a href="https://xgroup.ae/" target="_blank" rel="noreferrer">xgroup.ae</a><button class="text-button" data-route="privacy">Privacy</button></div>
     </footer>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>

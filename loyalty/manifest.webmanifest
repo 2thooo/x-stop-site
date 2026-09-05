@@ -1,16 +1,16 @@
 {
-  "name": "X Entertainment RAK Mall Loyalty",
-  "short_name": "X Loyalty",
-  "description": "Your activity loyalty passport for X Entertainment RAK Mall.",
-  "start_url": "./#/login",
+  "name": "X Group Activity Passport",
+  "short_name": "X Passport",
+  "id": "./",
+  "description": "Your X Group activity passport and booking hub.",
+  "start_url": "./#/passport",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#050307",
-  "theme_color": "#050307",
+  "background_color": "#08060c",
+  "theme_color": "#08060c",
   "icons": [
-    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "assets/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

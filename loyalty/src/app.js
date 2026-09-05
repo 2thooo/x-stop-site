@@ -6,13 +6,16 @@ const app = document.querySelector("#app");
 const toast = document.querySelector("#toast");
 const customerKey = "x_loyalty_customer_session";
 const qrKey = "x_loyalty_qr_credential";
+const lastActivityKey = "x_loyalty_last_activity";
 const activities = Object.freeze([
-  { slug: "laser-tag", name: "Laser Tag", icon: "assets/activity-icons/laser-tag.svg", line: "Aim. Tag. Score." },
-  { slug: "bowling", name: "Bowling", icon: "assets/activity-icons/bowling.svg", line: "Roll toward rewards." },
-  { slug: "billiard", name: "Billiard", icon: "assets/activity-icons/billiard.svg", line: "Every frame counts." },
-  { slug: "pc", name: "PC Gaming", icon: "assets/activity-icons/pc.svg", line: "Level up every session." },
-  { slug: "playstation", name: "PlayStation", icon: "assets/activity-icons/playstation.svg", line: "Play more. Earn more." }
+  { slug: "laser-tag", name: "Laser Tag", icon: "assets/activity-icons/laser-tag.svg", line: "Aim. Tag. Score.", venueSlug: "x-entertainment" },
+  { slug: "bowling", name: "Bowling", icon: "assets/activity-icons/bowling.svg", line: "Roll toward rewards.", venueSlug: "master-bowling" },
+  { slug: "escape-room", name: "Escape Room", icon: "assets/activity-icons/escape-room.svg", line: "Solve it together.", venueSlug: "x-entertainment" },
+  { slug: "billiard", name: "Billiard", icon: "assets/activity-icons/billiard.svg", line: "Every frame counts.", venueSlug: "expert-billiards" },
+  { slug: "gaming", name: "PC & PlayStation", icon: "assets/activity-icons/gaming.svg", line: "Level up every session.", venueSlug: "x-entertainment" },
+  { slug: "others", name: "Others", icon: "assets/activity-icons/others.svg", line: "More ways to play.", venueSlug: "x-entertainment" }
 ]);
+const bookingVenues = Object.freeze(Array.isArray(config.bookingVenues) ? config.bookingVenues : []);
 
 let installPrompt = null;
 let scannerStream = null;
@@ -24,7 +27,7 @@ let pendingScanToken = "";
 
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
-document.title = `${config.business.shortName} Loyalty`;
+document.title = `${config.business.groupName || config.business.shortName} Activity Passport`;
 document.querySelectorAll("[data-business-name]").forEach(element => { element.textContent = config.business.name; });
 const addressElement = document.querySelector("[data-business-address]");
 if (addressElement) addressElement.textContent = config.business.address;
@@ -56,6 +59,23 @@ if ("serviceWorker" in navigator) {
 }
 
 function activityMeta(slug) { return activities.find(activity => activity.slug === slug) || activities[0]; }
+function bookingVenue(slug) { return bookingVenues.find(venue => venue.slug === slug) || null; }
+function whatsappUrl(venue, activityName = "") {
+  const digits = String(venue?.whatsapp || "");
+  if (!/^9715\d{8}$/.test(digits)) return "";
+  const url = new URL(`https://wa.me/${digits}`);
+  const message = activityName
+    ? `I want to book ${activityName} at ${venue.name}. Please share the available times.`
+    : `I want to book an experience at ${venue.name}. Please share the available times.`;
+  url.searchParams.set("text", message);
+  return url.toString();
+}
+function bookingLink(venue, label, activityName = "", className = "button whatsapp") {
+  const href = whatsappUrl(venue, activityName);
+  if (!href) return "";
+  const accessible = `${label} on WhatsApp (opens in a new tab)`;
+  return `<a class="${escapeHtml(className)}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(accessible)}"><span class="chat-mark" aria-hidden="true">↗</span>${escapeHtml(label)}</a>`;
+}
 function safeNumber(value) { const number = Number(value); return Number.isFinite(number) ? number : 0; }
 function eventChange(event) {
   const rewardDelta = safeNumber(event.rewardDelta);
@@ -86,9 +106,21 @@ function homeView() {
   const stamps = Array.from({ length: 10 }, (_, index) => `<span class="stamp ${index < 4 ? "earned" : ""}">${index < 4 ? "X" : index + 1}</span>`).join("");
   const activityTiles = activities.map(activity => `<article class="activity-tile"><img src="${activity.icon}" alt="" width="52" height="52" /><strong>${activity.name}</strong><span>${activity.line}</span></article>`).join("");
   return `<section class="hero">
-    <div class="hero-copy"><p class="eyebrow">X Rewards · RAK Mall</p><h1>Play. Score.<span class="headline-accent">Repeat.</span></h1><p class="lead">One activity passport for every way you play at X Entertainment. Earn a separate balance for Laser Tag, Bowling, Billiard, PC Gaming and PlayStation.</p><div class="actions"><button class="button primary" data-route="join">Get my passport</button><button class="button secondary" data-route="login">Open my passport</button></div><div class="hero-meta"><span class="meta-chip">Installs on your home screen</span><span class="meta-chip">No native wallet required</span><span class="meta-chip">Private one-time scan codes</span></div></div>
-    <div class="wallet-preview" aria-label="Laser Tag loyalty passport preview"><div class="preview-orbit" aria-hidden="true"></div><div class="passport-stack"><div class="passport-shadow-card" aria-hidden="true"></div><article class="passport-card"><div class="passport-top"><img class="passport-logo" src="assets/x-entertainment-logo.jpg" alt="X Entertainment" width="112" height="92" /><span class="location-chip">RAK Mall</span></div><div class="passport-body"><span class="passport-label">Activity passport</span><h3>Laser Tag</h3><div class="passport-points"><strong>4</strong><span>of 10 points</span></div></div><div class="stamp-grid" aria-label="Four of ten example stamps earned">${stamps}</div><div class="passport-foot"><span>Member · X-0001</span><span>Your play, rewarded.</span></div></article></div></div>
-  </section><section class="activity-showcase"><div class="section-intro"><p class="eyebrow">Five ways to earn</p><h2>Your score lives with the activity.</h2><p>Each activity has its own points, reward target and scan history—so a Bowling visit never becomes a Laser Tag stamp.</p></div><div class="activity-grid">${activityTiles}</div></section>`;
+    <div class="hero-copy"><p class="eyebrow">X Group · Activity Passport</p><h1>Play. Score.<span class="headline-accent">Repeat.</span></h1><p class="lead">One passport for six ways to play. Earn a separate balance for Laser Tag, Bowling, Escape Room, Billiard, PC & PlayStation, and more.</p><div class="actions"><button class="button primary" data-route="join">Get my passport</button><button class="button secondary" data-route="passport">Open my passport</button><button class="button secondary" data-route="book">Book an experience</button></div><div class="hero-meta"><span class="meta-chip">Installs on your home screen</span><span class="meta-chip">No native wallet required</span><span class="meta-chip">Private one-time scan codes</span></div></div>
+    <div class="wallet-preview" aria-label="Laser Tag loyalty passport preview"><div class="preview-orbit" aria-hidden="true"></div><div class="passport-stack"><div class="passport-shadow-card" aria-hidden="true"></div><article class="passport-card"><div class="passport-top"><img class="passport-logo" src="assets/x-group-logo.jpg" alt="X Group" width="100" height="102" /><span class="location-chip">RAK Mall</span></div><div class="passport-body"><span class="passport-label">Activity passport</span><h3>Laser Tag</h3><div class="passport-points"><strong>4</strong><span>of 10 points</span></div></div><div class="stamp-grid" aria-label="Four of ten example stamps earned">${stamps}</div><div class="passport-foot"><span>Member · X-0001</span><span>Your play, rewarded.</span></div></article></div></div>
+  </section><section class="activity-showcase"><div class="section-intro"><p class="eyebrow">Six ways to earn</p><h2>Your score lives with the activity.</h2><p>Each activity has its own points, reward target and scan history—so a Bowling visit never becomes a Laser Tag stamp.</p></div><div class="activity-grid">${activityTiles}</div></section>`;
+}
+
+function bookingView() {
+  const venueCards = bookingVenues.map((venue, index) => {
+    const callNumber = String(venue.phone || "").replace(/[^+\d]/g, "");
+    const activityChips = venue.activities.map(activity => `<span>${escapeHtml(activity)}</span>`).join("");
+    return `<article class="venue-card">
+      <img class="venue-visual" src="${escapeHtml(venue.image)}" alt="" width="1200" height="800" loading="eager" />
+      <div class="venue-body"><span class="venue-number">Venue 0${index + 1}</span><h3>${escapeHtml(venue.name)}</h3><p class="venue-location"><span aria-hidden="true">⌖</span>${escapeHtml(venue.address)}</p><div class="venue-activities" aria-label="Activities">${activityChips}</div><span class="venue-phone">${escapeHtml(venue.phone)}</span><div class="venue-actions">${bookingLink(venue, "Book on WhatsApp", "", "venue-whatsapp")}<a class="venue-call" href="tel:${escapeHtml(callNumber)}" aria-label="Call ${escapeHtml(venue.name)}">Call</a><a class="venue-map" href="${escapeHtml(venue.mapUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${escapeHtml(venue.name)} in Google Maps">Map</a></div></div>
+    </article>`;
+  }).join("");
+  return `<section class="shell booking-shell"><div class="booking-head"><div><p class="eyebrow">Book · Call · Find us</p><h2>Choose your venue.</h2><p class="subtle">One tap opens a ready WhatsApp message. Each card also has its direct call and map.</p></div><div class="booking-note"><span>Quick booking</span><strong>No form. No account.</strong></div></div><div class="venue-grid">${venueCards}</div></section>`;
 }
 
 function joinView(prefill = "") {
@@ -103,7 +135,7 @@ function joinView(prefill = "") {
 }
 
 function loginView() {
-  return `<section class="shell narrow"><div class="panel">${configurationNotice()}<p class="eyebrow">Welcome back</p><h2>Open your passport.</h2><p class="subtle">Use the phone number and PIN you chose when joining.</p><form id="customer-login" class="form-grid"><div class="field"><label for="login-phone">Mobile number</label><input id="login-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required /></div><div class="field"><label for="login-pin">6-digit PIN</label><input id="login-pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6" required /></div><p class="form-error" id="login-error" role="alert"></p><button class="button primary" type="submit">Open my passport</button></form><p class="hint">Forgot your PIN? A team member can verify you in person and issue a short-lived reset code. <button class="inline-link" data-route="recover">Use a reset code</button></p></div></section>`;
+  return `<section class="shell entry-shell"><div class="entry-grid"><div class="panel login-panel">${configurationNotice()}<div class="entry-brand"><img src="assets/x-group-logo.jpg" alt="" width="100" height="102" /><div><p class="eyebrow">X Group Activity Passport</p><span>RAK · Sharjah</span></div></div><h1>Open your passport.</h1><p class="subtle">Your activity points and one-time loyalty QR are one quick sign-in away.</p><form id="customer-login" class="form-grid"><div class="field"><label for="login-phone">Mobile number</label><input id="login-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05X XXX XXXX" required /></div><div class="field"><label for="login-pin">6-digit PIN</label><input id="login-pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6" required /></div><p class="form-error" id="login-error" role="alert"></p><button class="button primary" type="submit">Open my passport</button></form><p class="hint">New here? <button class="inline-link" data-route="join">Create a passport</button> · Forgot your PIN? <button class="inline-link" data-route="recover">Reset PIN</button></p></div><aside class="entry-visual"><img src="assets/venue-x-entertainment.jpg" alt="" width="1200" height="800" /><div class="entry-visual-copy"><p class="eyebrow">Ready to play?</p><h2>Book in seconds.</h2><p>WhatsApp, phone and directions for every venue.</p><button class="button booking-light" data-route="book">Choose a venue</button></div></aside></div></section>`;
 }
 
 function recoverView(prefill = "") {
@@ -131,11 +163,12 @@ async function memberView(selectedSlug = activities[0].slug, generation = render
     const points = safeNumber(data.points);
     const threshold = Math.max(1, safeNumber(data.rewardThreshold));
     const progressValue = Math.min(threshold, points % threshold || (points > 0 ? threshold : 0));
-    app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">X Activity Passport</p><h2>Welcome, ${escapeHtml(data.displayName)}.</h2><p class="subtle">Member ${escapeHtml(data.memberCode)}</p></div><button id="customer-logout" class="button ghost">Sign out</button></div>${renderActivityRail(selected.slug, data.activityBalances)}<div class="member-grid">
-      <article class="panel member-card"><div class="member-card-head"><div class="member-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><span>Selected activity</span><strong>${escapeHtml(data.selectedActivity?.name || selected.name)}</strong></div></div><span class="location-chip">RAK Mall</span></div><div class="points"><strong>${points}</strong><span>activity points</span></div><progress value="${progressValue}" max="${threshold}" aria-label="${progressValue} of ${threshold} points toward the next reward"></progress><div class="reward-row"><span>${progressValue} / ${threshold} to next reward</span><span>${safeNumber(data.rewardsAvailable)} available</span></div><p>${escapeHtml(data.rewardText)}</p><p class="subtle">Last ${escapeHtml(selected.name)} visit: ${escapeHtml(formatDubaiTime(data.lastScannedAt))}</p></article>
+    const venue = bookingVenue(selected.venueSlug);
+    app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">X Group Activity Passport</p><h2>Welcome, ${escapeHtml(data.displayName)}.</h2><p class="subtle">Member ${escapeHtml(data.memberCode)}</p></div><button id="customer-logout" class="button ghost">Sign out</button></div>${renderActivityRail(selected.slug, data.activityBalances)}<div class="member-grid">
+      <article class="panel member-card"><div class="member-card-head"><div class="member-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><span>Selected activity</span><strong>${escapeHtml(data.selectedActivity?.name || selected.name)}</strong></div></div><span class="location-chip">${escapeHtml(venue?.name || config.business.branch)}</span></div><div class="points"><strong>${points}</strong><span>activity points</span></div><progress value="${progressValue}" max="${threshold}" aria-label="${progressValue} of ${threshold} points toward the next reward"></progress><div class="reward-row"><span>${progressValue} / ${threshold} to next reward</span><span>${safeNumber(data.rewardsAvailable)} available</span></div><p>${escapeHtml(data.rewardText)}</p><p class="subtle">Last ${escapeHtml(selected.name)} visit: ${escapeHtml(formatDubaiTime(data.lastScannedAt))}</p>${bookingLink(venue, `Book ${selected.name}`, selected.name)}</article>
       <article class="panel qr-panel"><div><p class="eyebrow">One-time play code</p><h3>Show this to the team.</h3></div><div class="qr-wrap">${data.qrSvg || ""}</div><div class="qr-meta"><span>For ${escapeHtml(selected.name)}</span><span>Expires ${escapeHtml(formatDubaiTime(data.scanTokenExpiresAt))}</span></div><p class="hint">This code is activity-specific, expires after five minutes and can be accepted only once. Refresh it if the team asks for a new code.</p><div class="actions"><button id="refresh-code" class="button secondary">Refresh code</button><button id="install-button" class="button ghost">Add to home screen</button></div></article>
     </div></section>`;
-    document.querySelectorAll("[data-activity]").forEach(button => button.addEventListener("click", () => { location.hash = `#/member/${button.dataset.activity}`; }));
+    document.querySelectorAll("[data-activity]").forEach(button => button.addEventListener("click", () => { localStorage.setItem(lastActivityKey, button.dataset.activity); location.hash = `#/member/${button.dataset.activity}`; }));
     settleViewPosition();
     document.querySelector("#refresh-code")?.addEventListener("click", event => {
       event.currentTarget.disabled = true;
@@ -143,19 +176,19 @@ async function memberView(selectedSlug = activities[0].slug, generation = render
       memberView(selected.slug, nextGeneration);
     });
     document.querySelector("#install-button")?.addEventListener("click", installApp);
-    document.querySelector("#customer-logout")?.addEventListener("click", () => { localStorage.removeItem(customerKey); localStorage.removeItem(qrKey); location.hash = "#/"; });
+    document.querySelector("#customer-logout")?.addEventListener("click", () => { localStorage.removeItem(customerKey); localStorage.removeItem(qrKey); localStorage.removeItem(lastActivityKey); location.hash = "#/passport"; });
   } catch (error) {
     if (generation !== renderGeneration) return;
     const expired = /session|sign in|replaced/i.test(error.message);
     if (expired) { localStorage.removeItem(customerKey); localStorage.removeItem(qrKey); }
-    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Passport unavailable</p><h2>We could not open this card.</h2><p>${escapeHtml(error.message)}</p><div class="actions"><button class="button primary" data-route="${expired ? "login" : `member/${activity.slug}`}">${expired ? "Sign in again" : "Try again"}</button><button class="button secondary" data-route="home">Back home</button></div></div></section>`;
+    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Passport unavailable</p><h2>We could not open this card.</h2><p>${escapeHtml(error.message)}</p><div class="actions"><button class="button primary" data-route="${expired ? "passport" : `member/${activity.slug}`}">${expired ? "Sign in again" : "Try again"}</button><button class="button secondary" data-route="book">Book an experience</button></div></div></section>`;
     settleViewPosition();
   }
 }
 
 function ownerView() {
   if (ownerAccessToken) { location.hash = "#/dashboard"; return ""; }
-  return `<section class="shell narrow"><div class="panel">${configurationNotice()}<p class="eyebrow">Team only</p><h2>Secure staff access.</h2><p class="subtle">Only an active X Entertainment owner account can create member codes, scan passports or award points.</p><form id="owner-login" class="form-grid"><div class="field"><label for="owner-email">Owner email</label><input id="owner-email" name="email" type="email" autocomplete="username" required /></div><div class="field"><label for="owner-password">Password</label><input id="owner-password" name="password" type="password" autocomplete="current-password" required /></div><p class="form-error" id="owner-error" role="alert"></p><button class="button primary" type="submit">Sign in</button></form></div></section>`;
+  return `<section class="shell narrow"><div class="panel admin-panel">${configurationNotice()}<span class="admin-lock" aria-hidden="true">●</span><p class="eyebrow">X Group Admin</p><h2>Secure staff access.</h2><p class="subtle">The dashboard, scanner and point controls require an active admin email and password.</p><form id="owner-login" class="form-grid"><div class="field"><label for="owner-email">Admin email</label><input id="owner-email" name="email" type="email" autocomplete="username" required /></div><div class="field"><label for="owner-password">Password</label><input id="owner-password" name="password" type="password" autocomplete="current-password" required /></div><p class="form-error" id="owner-error" role="alert"></p><button class="button primary" type="submit">Open admin dashboard</button></form></div></section>`;
 }
 
 function activityBadges(balances) {
@@ -169,7 +202,7 @@ function ownerActivityCards(items) {
 
 async function dashboardView(generation = renderGeneration, customerOffset = 0) {
   const ownerToken = ownerAccessToken;
-  if (!ownerToken) { location.hash = "#/owner"; return; }
+  if (!ownerToken) { location.hash = "#/admin"; return; }
   app.innerHTML = `<div class="loading">Loading the team dashboard…</div>`;
   settleViewPosition();
   try {
@@ -197,10 +230,10 @@ async function dashboardView(generation = renderGeneration, customerOffset = 0) 
     if (error.status === 401 || error.status === 403) {
       ownerAccessToken = null;
       showToast("Your staff session expired. Sign in again.");
-      location.hash = "#/owner";
+      location.hash = "#/admin";
       return;
     }
-    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Dashboard unavailable</p><h2>Your session is still saved.</h2><p>${escapeHtml(error.message)}</p><div class="actions"><button class="button primary" data-route="dashboard">Retry</button><button class="button secondary" data-route="home">Back home</button></div></div></section>`;
+    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Dashboard unavailable</p><h2>Your session is still saved.</h2><p>${escapeHtml(error.message)}</p><div class="actions"><button class="button primary" data-route="dashboard">Retry</button><button class="button secondary" data-route="passport">Customer passport</button></div></div></section>`;
     settleViewPosition();
   }
 }
@@ -261,12 +294,12 @@ function bindActivitySettings(settings) {
 }
 
 function scannerView(prefill = "") {
-  if (!ownerAccessToken) { location.hash = "#/owner"; return ""; }
+  if (!ownerAccessToken) { location.hash = "#/admin"; return ""; }
   return `<section class="shell narrow"><div class="panel"><div class="panel-head"><div><p class="eyebrow">Team scanner</p><h2>Scan. Review. Confirm.</h2></div><button class="text-button" data-route="dashboard">Close</button></div><div class="scan-box"><video id="scanner-video" class="scanner-video" playsinline muted></video><button id="start-scanner" class="button primary">Start camera scanner</button><p class="hint">The built-in scanner works on iPhone, Samsung and other modern phones. The member must select the activity before showing the code. The normal phone Camera app is a backup, but a newly opened tab may ask staff to sign in again.</p><div class="field"><label for="scan-value">Or paste a one-time scan code</label><input id="scan-value" value="${escapeHtml(prefill)}" autocomplete="off" autocapitalize="off" spellcheck="false" /></div><button id="lookup-code" class="button secondary">Review visit</button><div id="scan-result" aria-live="polite"></div></div></div></section>`;
 }
 
 function privacyView() {
-  return `<section class="shell narrow"><div class="panel"><p class="eyebrow">Privacy</p><h2>Only what the program needs.</h2><p>X Rewards uses your name, phone number, PIN-derived security data, separate activity balances and visit history to operate the loyalty program. PINs are processed into one-way security hashes and are not stored in readable form.</p><p>The QR contains a random, activity-specific scan token—not your phone number or balance. A new token expires after five minutes and can be accepted only once.</p><p>Enrollment and PIN recovery require a one-time code from staff after an in-person check. The website does not send an SMS or independently prove ownership of the entered phone number. Ask the venue about correction, deactivation or deletion requests and any records it must retain.</p><button class="button secondary" data-route="home">Back home</button></div></section>`;
+  return `<section class="shell narrow"><div class="panel"><p class="eyebrow">Privacy</p><h2>Only what the program needs.</h2><p>X Group Passport uses your name, phone number, PIN-derived security data, separate activity balances and visit history to operate the loyalty program. PINs are processed into one-way security hashes and are not stored in readable form.</p><p>The QR contains a random, activity-specific scan token—not your phone number or balance. A new token expires after five minutes and can be accepted only once.</p><p>Enrollment and PIN recovery require a one-time code from staff after an in-person check. The website does not send an SMS or independently prove ownership of the entered phone number. Ask the venue about correction, deactivation or deletion requests and any records it must retain.</p><button class="button secondary" data-route="passport">Back to passport</button></div></section>`;
 }
 
 async function installApp() {
@@ -381,7 +414,7 @@ function bindForms(route) {
     try { const pin = validatePin(form.get("pin")); if (pin !== form.get("pinConfirm")) throw new Error("PINs do not match."); const data = await callApi("recover-pin", { phone: normalizePhone(form.get("phone")), resetCode: form.get("resetCode"), newPin: pin }); localStorage.setItem(customerKey, data.sessionToken); localStorage.setItem(qrKey, data.qrToken); location.hash = "#/member/laser-tag"; }
     catch (error) { errorElement.textContent = error.message; setFormBusy(formElement, false); }
   });
-  if (route === "owner") document.querySelector("#owner-login")?.addEventListener("submit", async event => {
+  if (route === "owner" || route === "admin") document.querySelector("#owner-login")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#owner-error"); errorElement.textContent = "";
     try { const token = await ownerLogin(form.get("email"), form.get("password")); await callApi("owner-check", {}, token); ownerAccessToken = token; const pending = pendingScanToken; pendingScanToken = ""; location.hash = pending ? `#/scan/${pending}` : "#/dashboard"; }
     catch (error) { errorElement.textContent = error.message; setFormBusy(formElement, false); }
@@ -393,22 +426,32 @@ async function render() {
   stopScanner();
   const generation = ++renderGeneration;
   if (window.top !== window.self) {
-    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Direct access required</p><h2>Open X Rewards in its own tab.</h2><p>For your security, registration, passport and team controls are disabled when this site is embedded inside another page.</p></div></section>`;
+    app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">Direct access required</p><h2>Open X Group Passport in its own tab.</h2><p>For your security, registration, passport and team controls are disabled when this site is embedded inside another page.</p></div></section>`;
     settleViewPosition();
     return;
   }
-  const path = location.hash.replace(/^#\//, "") || "home";
+  let path = location.hash.replace(/^#\//, "");
+  if (!path || path === "home") {
+    history.replaceState(null, "", "#/passport");
+    path = "passport";
+  }
   const [route, token] = path.split("/");
+  if (route === "passport") {
+    const hasPassport = localStorage.getItem(customerKey) && localStorage.getItem(qrKey);
+    if (hasPassport) return memberView(activityMeta(localStorage.getItem(lastActivityKey)).slug, generation);
+    app.innerHTML = loginView(); bindForms("login"); settleViewPosition(); return;
+  }
   if (route === "join") { app.innerHTML = joinView(token || ""); bindForms("join"); settleViewPosition(); return; }
   if (route === "recover") { app.innerHTML = recoverView(token || ""); bindForms("recover"); settleViewPosition(); return; }
   if (route === "member") return memberView(activityMeta(token).slug, generation);
   if (route === "dashboard") return dashboardView(generation, /^\d+$/.test(token || "") ? Number(token) : 0);
   if (route === "scan") {
-    if (!ownerAccessToken) { pendingScanToken = token || ""; location.hash = "#/owner"; return; }
+    if (!ownerAccessToken) { pendingScanToken = token || ""; location.hash = "#/admin"; return; }
     app.innerHTML = scannerView(token || ""); bindForms("scanner"); settleViewPosition(); if (token) lookupCode(token); return;
   }
-  const views = { home: homeView, login: loginView, owner: ownerView, scanner: scannerView, privacy: privacyView };
-  app.innerHTML = (views[route] || homeView)();
+  const views = { about: homeView, book: bookingView, login: loginView, owner: ownerView, admin: ownerView, scanner: scannerView, privacy: privacyView };
+  if (!views[route]) { history.replaceState(null, "", "#/passport"); app.innerHTML = loginView(); bindForms("login"); settleViewPosition(); return; }
+  app.innerHTML = views[route]();
   bindForms(route);
   settleViewPosition();
 }
