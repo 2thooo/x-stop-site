@@ -1,0 +1,2 @@
+[functions.loyalty-api]
+verify_jwt = false
