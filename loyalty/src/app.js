@@ -9,12 +9,12 @@ const customerKey = "x_loyalty_customer_session";
 const qrKey = "x_loyalty_qr_credential";
 const lastActivityKey = "x_loyalty_last_activity";
 const activities = Object.freeze([
-  { slug: "laser-tag", icon: "assets/activity-icons/laser-tag.svg", venueSlug: "x-entertainment" },
-  { slug: "bowling", icon: "assets/activity-icons/bowling.svg", venueSlug: "master-bowling" },
-  { slug: "escape-room", icon: "assets/activity-icons/escape-room.svg", venueSlug: "x-entertainment" },
-  { slug: "billiard", icon: "assets/activity-icons/billiard.svg", venueSlug: "expert-billiards" },
-  { slug: "gaming", icon: "assets/activity-icons/gaming.svg", venueSlug: "x-entertainment" },
-  { slug: "others", icon: "assets/activity-icons/others.svg", venueSlug: "x-entertainment" }
+  { slug: "laser-tag", icon: "assets/activity-icons/laser-tag.svg" },
+  { slug: "bowling", icon: "assets/activity-icons/bowling.svg" },
+  { slug: "escape-room", icon: "assets/activity-icons/escape-room.svg" },
+  { slug: "billiard", icon: "assets/activity-icons/billiard.svg" },
+  { slug: "gaming", icon: "assets/activity-icons/gaming.svg" },
+  { slug: "others", icon: "assets/activity-icons/others.svg" }
 ]);
 const bookingVenues = Object.freeze(Array.isArray(config.bookingVenues) ? config.bookingVenues : []);
 
@@ -83,7 +83,9 @@ function activityMeta(slug) {
   return { ...activity, name: activityName(activity.slug), line: activityLine(activity.slug) };
 }
 function allActivities() { return activities.map(activity => activityMeta(activity.slug)); }
-function bookingVenue(slug) { return bookingVenues.find(venue => venue.slug === slug) || null; }
+function activityBookingVenues(slug) {
+  return bookingVenues.filter(venue => Array.isArray(venue.activitySlugs) && venue.activitySlugs.includes(slug));
+}
 function venueText(venue, field) {
   const localized = getLanguage() === "ar" ? venue?.[`${field}Ar`] : venue?.[field];
   return String(localized || venue?.[field] || "");
@@ -203,12 +205,19 @@ async function memberView(selectedSlug = activities[0].slug, generation = render
     const points = safeNumber(data.points);
     const threshold = Math.max(1, safeNumber(data.rewardThreshold));
     const progressValue = Math.min(threshold, points % threshold || (points > 0 ? threshold : 0));
-    const venue = bookingVenue(selected.venueSlug);
+    const venues = activityBookingVenues(selected.slug);
+    const venueLabel = venues.map(venue => venueText(venue, "name")).filter(Boolean).join(" · ") || config.business.branch;
+    const bookingLabel = t("member.book", { activity: selected.name });
+    const bookingLinks = venues.map(venue => bookingLink(
+      venue,
+      venues.length > 1 ? `${bookingLabel} · ${venueText(venue, "name")}` : bookingLabel,
+      selected.name
+    )).join("");
     const rewardsAvailable = safeNumber(data.rewardsAvailable);
     const rewardText = getLanguage() === "ar" ? (data.rewardTextAr || data.rewardText) : data.rewardText;
     const redemptionAction = rewardsAvailable > 0 ? `<div class="redeem-customer"><button id="request-redeem" class="button reward-button" type="button">${escapeHtml(t("member.redeem"))}</button><span>${escapeHtml(t("member.redeemHint"))}</span></div>` : "";
     app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">${escapeHtml(t("login.eyebrow"))}</p><h2>${escapeHtml(t("member.welcome", { name: data.displayName }))}</h2><p class="subtle">${escapeHtml(t("member.number", { code: data.memberCode }))}</p></div><button id="customer-logout" class="button ghost">${escapeHtml(t("common.signOut"))}</button></div>${renderActivityRail(selected.slug, data.activityBalances)}<div class="member-grid">
-      <article class="panel member-card"><div class="member-card-head"><div class="member-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><span>${escapeHtml(t("member.selected"))}</span><strong>${escapeHtml(selected.name)}</strong></div></div><span class="location-chip">${escapeHtml(venueText(venue, "name") || config.business.branch)}</span></div><div class="points"><strong>${points}</strong><span>${escapeHtml(t("member.points"))}</span></div><progress value="${progressValue}" max="${threshold}" aria-label="${escapeHtml(t("member.progressAria", { current: progressValue, target: threshold }))}"></progress><div class="reward-row"><span>${escapeHtml(t("member.progress", { current: progressValue, target: threshold }))}</span><span>${escapeHtml(t("member.available", { count: rewardsAvailable }))}</span></div><p>${escapeHtml(rewardText)}</p>${redemptionAction}<p class="subtle">${escapeHtml(t("member.lastVisit", { activity: selected.name, date: formatDubaiDateTime(data.lastScannedAt) }))}</p>${bookingLink(venue, t("member.book", { activity: selected.name }), selected.name)}</article>
+      <article class="panel member-card"><div class="member-card-head"><div class="member-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><span>${escapeHtml(t("member.selected"))}</span><strong>${escapeHtml(selected.name)}</strong></div></div><span class="location-chip">${escapeHtml(venueLabel)}</span></div><div class="points"><strong>${points}</strong><span>${escapeHtml(t("member.points"))}</span></div><progress value="${progressValue}" max="${threshold}" aria-label="${escapeHtml(t("member.progressAria", { current: progressValue, target: threshold }))}"></progress><div class="reward-row"><span>${escapeHtml(t("member.progress", { current: progressValue, target: threshold }))}</span><span>${escapeHtml(t("member.available", { count: rewardsAvailable }))}</span></div><p>${escapeHtml(rewardText)}</p>${redemptionAction}<p class="subtle">${escapeHtml(t("member.lastVisit", { activity: selected.name, date: formatDubaiDateTime(data.lastScannedAt) }))}</p>${bookingLinks}</article>
       <article id="member-qr-panel" class="panel qr-panel"><div><p class="eyebrow">${escapeHtml(t("member.qrEyebrow"))}</p><h3 id="member-qr-title">${escapeHtml(t("member.qrTitle"))}</h3></div><div class="qr-wrap">${data.qrSvg || ""}</div><div class="qr-meta"><span>${escapeHtml(t("member.forActivity", { activity: selected.name }))}</span><span>${escapeHtml(t("member.expires", { date: formatDubaiDateTime(data.scanTokenExpiresAt) }))}</span></div><p class="hint">${escapeHtml(t("member.qrHint"))}</p><div class="actions"><button id="refresh-code" class="button secondary">${escapeHtml(t("member.refresh"))}</button><button id="install-button" class="button ghost">${escapeHtml(t("member.install"))}</button></div></article>
     </div></section>`;
     document.querySelectorAll("[data-activity]").forEach(button => button.addEventListener("click", () => { localStorage.setItem(lastActivityKey, button.dataset.activity); location.hash = `#/member/${button.dataset.activity}`; }));

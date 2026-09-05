@@ -11,7 +11,7 @@ The customer experience is one X Group Passport with six independent activity ca
 - PC & PlayStation
 - Others
 
-Each card has its own points, reward rule, last scan and short-lived QR. The staff dashboard keeps raw scans separate from confirmed point awards and shows up to 1,000 recent accepted events in Dubai time. A compact dark booking panel presents all three venues side by side with direct WhatsApp, phone and Google Maps actions.
+Each card has its own points, reward rule, last scan and short-lived QR. The staff dashboard keeps raw scans separate from confirmed point awards and shows up to 1,000 recent accepted events in Dubai time. A compact dark booking panel presents all three venues side by side with direct WhatsApp, phone and Google Maps actions. The deployed interface includes a persistent English/Arabic toggle across customer, booking, privacy, scanner and admin screens, with native right-to-left layout in Arabic.
 
 ## Security and product behavior
 
@@ -22,6 +22,7 @@ Each card has its own points, reward rule, last scan and short-lived QR. The sta
 - Customer sessions and QR credentials are stored in the database only as SHA-256 hashes.
 - Every displayed QR is activity-specific, expires in five minutes and is consumed atomically on first scan.
 - Staff must review the member and activity before confirming points.
+- A customer may request a reward, but only authenticated staff can scan the current activity QR, confirm the redemption and atomically deduct one available reward.
 - Duplicate point confirmation is prevented by both an idempotency key and a database uniqueness rule.
 - PIN recovery requires a one-use, 15-minute code issued after in-person staff verification. The customer chooses the replacement PIN privately.
 - Direct anonymous and ordinary authenticated access to every public table/function is revoked. The Edge Function is the only data boundary.
@@ -38,11 +39,11 @@ The bare `/loyalty/` URL redirects into the Passport route, making it the stable
 
 ## Venue booking and location routes
 
-- X Entertainment RAK Mall — Laser Tag, Escape Room, PC & PlayStation, Others — RAK Mall, Al Qurum, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=12180427487395956802)
+- X Entertainment RAK Mall — Laser Tag, Bowling, Escape Room, Billiard, PC & PlayStation, Others — RAK Mall, Al Qurum, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=12180427487395956802)
 - Masters Bowling — Bowling — Opposite Naeem Mall, Al Nakheel, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=6477996226481961738)
 - Expert Billiards — Billiard — LULU Buhairah, 1st Floor, Al Majaz 3, Sharjah — `+971 58 624 9734` — [Map](https://www.google.com/maps?cid=21444396744758821)
 
-The numbers, addresses and direct map links are centralized in `config.js`. The supplied Masters Bowling WhatsApp number differs from the current Google listing, so confirm that routing number before printing permanent signage.
+The numbers, addresses, activity availability and direct map links are centralized in `config.js`. Bowling offers separate WhatsApp actions for X Entertainment and Masters Bowling; Billiard offers X Entertainment and Expert Billiards. Laser Tag is available only at X Entertainment, while Expert Billiards never appears for Bowling, Escape Room or Laser Tag. The supplied Masters Bowling WhatsApp number differs from the current Google listing, so confirm that routing number before printing permanent signage.
 
 ## Architecture
 
@@ -133,7 +134,7 @@ After Pages updates, verify:
 2. The database assigns a random, non-enumerable member code with no small numeric ceiling.
 3. The customer selects one of the six activity cards.
 4. The app creates a one-use QR for that exact activity, valid for five minutes.
-5. Staff scans, verifies the member and activity, then confirms points, redeems an available reward or records no transaction.
+5. Staff scans and verifies the member and activity, then confirms points or records no transaction. If the customer requests a reward, authenticated staff confirms the redemption and the database deducts one available reward atomically.
 6. A login from another browser rotates the long-lived QR credential and invalidates the previous credential.
 
 ## PIN recovery
@@ -150,9 +151,19 @@ The dashboard allows the owner to set, independently for each activity:
 
 - points awarded per confirmed visit (`1–20`)
 - points required for a reward (`2–1000`)
-- the customer-facing reward message
+- the customer-facing reward message in English
+- the customer-facing reward message in Arabic
 
-The initial migration seeds one point per visit and a ten-point target for every activity. Review the commercial offer before launch; the default reward text is illustrative, not a customer contract.
+Both reward messages are required and saved together with the activity settings; the customer and staff views show the message for the selected interface language. The initial migration seeds one point per visit and a ten-point target for every activity. Review the commercial offer before launch; the default reward text is illustrative, not a customer contract.
+
+## Staff guide and rollout poster
+
+The employee guide is English-only. The customer poster remains bilingual:
+
+- [Employee Guide — PowerPoint](docs/X-Group-Employee-Guide-English.pptx)
+- [Employee Guide — PDF](docs/X-Group-Employee-Guide-English.pdf)
+- [Customer Loyalty Poster — PDF](docs/X-Group-Loyalty-Poster-Bilingual.pdf)
+- [Customer Loyalty Poster — PNG](docs/X-Group-Loyalty-Poster-Bilingual.png)
 
 ## Local preview
 

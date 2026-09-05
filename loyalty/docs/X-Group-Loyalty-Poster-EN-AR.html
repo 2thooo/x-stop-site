@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>X Group Loyalty Poster</title>
+  <style>
+    @font-face { font-family: Tajawal; src: url("../assets/tajawal-arabic-400.woff2") format("woff2"); font-weight: 400; unicode-range: U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFC; }
+    @font-face { font-family: Tajawal; src: url("../assets/tajawal-latin-400.woff2") format("woff2"); font-weight: 400; unicode-range: U+0000-024F,U+2000-206F; }
+    @font-face { font-family: Tajawal; src: url("../assets/tajawal-arabic-700.woff2") format("woff2"); font-weight: 700 800; unicode-range: U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFC; }
+    @font-face { font-family: Tajawal; src: url("../assets/tajawal-latin-700.woff2") format("woff2"); font-weight: 700 800; unicode-range: U+0000-024F,U+2000-206F; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body { overflow: hidden; background: #07040d; font-family: Tajawal, Arial, sans-serif; }
+    .poster { position: relative; width: 100vw; height: 100vh; overflow: hidden; color: #fff; background: #09050f url("assets/loyalty-poster-background.png") center/cover no-repeat; }
+    .poster::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,2,10,.25), rgba(5,2,10,.04) 40%, rgba(5,2,10,.58)); }
+    .poster::after { content: ""; position: absolute; inset: 3.5%; border: 1px solid rgba(255,255,255,.16); border-radius: 3.2vw; pointer-events: none; }
+    .brand { position: absolute; z-index: 2; top: 3.2%; left: 50%; transform: translateX(-50%); direction: ltr; display: flex; align-items: center; gap: 1.15vw; }
+    .brand img { width: 6.7vw; height: 6.7vw; object-fit: cover; border: 2px solid rgba(255,255,255,.9); border-radius: 50%; box-shadow: 0 0 34px rgba(101,15,253,.55); }
+    .brand-copy { display: grid; color: #fff; line-height: 1; }
+    .brand-copy strong { font-size: 2.05vw; font-weight: 800; letter-spacing: .08em; }
+    .brand-copy span { margin-top: .5vw; color: #cdbcf0; font-size: .76vw; letter-spacing: .17em; }
+    .top { position: absolute; z-index: 2; top: 11.2%; left: 6.5%; right: 6.5%; direction: ltr; display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 3.5vw; }
+    .title { min-width: 0; }
+    .title .label { margin: 0 0 .72vw; color: #ffd21a; font-size: 1.42vw; line-height: 1; font-weight: 700; }
+    .title h1 { margin: 0; font-size: 4vw; line-height: .98; font-weight: 800; }
+    .title-en { direction: ltr; text-align: left; }
+    .title-ar { direction: rtl; text-align: right; }
+    .title-ar h1 { font-size: 4.08vw; line-height: 1.06; }
+    .qr-card { position: absolute; z-index: 2; top: 31.5%; left: 50%; width: 49%; transform: translateX(-50%); padding: 2.35%; border-radius: 3vw; color: #120b1b; background: #fff; box-shadow: 0 2vw 6vw rgba(0,0,0,.58), 0 0 0 .55vw rgba(101,15,253,.24); text-align: center; }
+    .qr-code-frame { position: relative; padding: 1.1vw; border: .48vw solid #650ffd; outline: .18vw solid #ffd21a; border-radius: 2.2vw; background: #fff; box-shadow: inset 0 0 0 .24vw rgba(101,15,253,.12), 0 1vw 2.5vw rgba(32,5,62,.2); }
+    .qr-code-frame::before, .qr-code-frame::after { content: ""; position: absolute; width: 11%; height: 1.1vw; top: -.84vw; border-radius: 99px; background: #ffd21a; }
+    .qr-code-frame::before { left: 10%; }
+    .qr-code-frame::after { right: 10%; }
+    .qr-card img { display: block; width: 100%; height: auto; direction: ltr; image-rendering: pixelated; }
+    .qr-card .ar { margin: 1.2vw 0 0; color: #241032; font-size: 3.1vw; line-height: 1.1; font-weight: 800; }
+    .qr-card .en { direction: ltr; margin: .45vw 0 0; color: #650ffd; font-size: 1.34vw; font-weight: 800; letter-spacing: .13em; }
+    .reward-line { position: absolute; z-index: 2; top: 24.8%; left: 7.5%; right: 7.5%; direction: ltr; display: grid; grid-template-columns: 1fr 1fr; gap: 5vw; align-items: center; }
+    .reward-line strong { display: block; font-size: 1.95vw; line-height: 1.15; }
+    .reward-line .en { direction: ltr; color: #fff; text-align: left; letter-spacing: .01em; }
+    .reward-line .ar { direction: rtl; color: #fff; text-align: right; }
+    .bottom { position: absolute; z-index: 2; inset: auto 6.5% 5%; display: grid; gap: 1.85vw; }
+    .activities { direction: ltr; display: flex; justify-content: center; gap: 1.55vw; }
+    .activities span { width: 7vw; height: 7vw; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 1.85vw; background: rgba(10,5,17,.82); box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+    .activities img { width: 64%; height: 64%; object-fit: contain; }
+    .place { text-align: center; }
+    .place strong { display: block; color: #fff; font-size: 2.05vw; }
+    .place span { direction: ltr; display: block; margin-top: .42vw; color: #d0c3dd; font-size: 1.05vw; font-weight: 700; letter-spacing: .11em; }
+    @page { size: A4 portrait; margin: 0; }
+    @media print { .poster { width: 210mm; height: 297mm; } }
+  </style>
+</head>
+<body>
+  <main class="poster">
+    <div class="brand">
+      <img src="../assets/x-group-logo.jpg" alt="" />
+      <div class="brand-copy"><strong>X GROUP</strong><span>LOYALTY PASSPORT</span></div>
+    </div>
+    <div class="top">
+      <div class="title title-ar">
+        <p class="label">جواز ولاء إكس جروب</p>
+        <h1>العب أكثر.<br />واحصل على مكافآت.</h1>
+      </div>
+      <div class="title title-en">
+        <p class="label">X GROUP LOYALTY PASSPORT</p>
+        <h1>PLAY MORE.<br />GET REWARDED.</h1>
+      </div>
+    </div>
+    <div class="reward-line"><strong class="ar">امسح الرمز لفتح<br />جواز الولاء</strong><strong class="en">SCAN TO OPEN YOUR<br />LOYALTY PASSPORT</strong></div>
+    <section class="qr-card" aria-label="QR code for the X Group Activity Passport">
+      <div class="qr-code-frame"><img src="assets/loyalty-passport-qr.png" alt="" /></div>
+      <p class="ar">امسح وابدأ</p>
+      <p class="en">SCAN &amp; START</p>
+    </section>
+    <div class="bottom">
+      <div class="activities" aria-hidden="true">
+        <span><img src="../assets/activity-icons/laser-tag.svg" alt="" /></span>
+        <span><img src="../assets/activity-icons/bowling.svg" alt="" /></span>
+        <span><img src="../assets/activity-icons/escape-room.svg" alt="" /></span>
+        <span><img src="../assets/activity-icons/billiard.svg" alt="" /></span>
+        <span><img src="../assets/activity-icons/gaming.svg" alt="" /></span>
+        <span><img src="../assets/activity-icons/others.svg" alt="" /></span>
+      </div>
+      <div class="place"><strong>رأس الخيمة · الشارقة</strong><span>RAS AL KHAIMAH · SHARJAH</span></div>
+    </div>
+  </main>
+</body>
+</html>
