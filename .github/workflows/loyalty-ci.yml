@@ -1,0 +1,38 @@
+name: Loyalty CI
+
+on:
+  push:
+    paths:
+      - "loyalty/**"
+      - ".github/workflows/loyalty-ci.yml"
+  pull_request:
+    paths:
+      - "loyalty/**"
+      - ".github/workflows/loyalty-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loyalty-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test loyalty passport
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: loyalty
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Run loyalty tests
+        run: npm test
