@@ -20,19 +20,135 @@ concurrency:
 
 jobs:
   test:
-    name: Test loyalty passport
+    name: Test and public-secret check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: loyalty
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
-      - name: Run loyalty tests
+      - name: Run Node tests
         run: npm test
+
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in config.js config.example.js sw.js src/*.js; do
+            node --check "$file"
+          done
+
+      - name: Reject private credentials in tracked loyalty files
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { extname, join } from "node:path";
+          import { readFileSync, statSync } from "node:fs";
+
+          const root = execFileSync(
+            "git",
+            ["rev-parse", "--show-toplevel"],
+            { encoding: "utf8" },
+          ).trim();
+
+          const tracked = execFileSync(
+            "git",
+            ["-C", root, "ls-files", "-z", "--", "loyalty"],
+          ).toString("utf8").split("\0").filter(Boolean);
+
+          const textExtensions = new Set([
+            ".css", ".html", ".js", ".json", ".md", ".mjs", ".sql", ".svg",
+            ".toml", ".txt", ".webmanifest", ".xml", ".yaml", ".yml",
+          ]);
+
+          const detectors = [
+            ["Supabase secret key", /\bsb_secret_[A-Za-z0-9_-]{20,}\b/],
+            ["private key block", /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],
+            ["GitHub token", /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b/],
+            ["AWS access key", /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/],
+            ["Stripe secret key", /\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/],
+            ["OpenAI API key", /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/],
+          ];
+
+          const findings = [];
+
+          for (const file of tracked) {
+            const privateEnvironmentFile =
+              /(?:^|\/)\.env(?:\.|$)/i.test(file) &&
+              !/\.env\.example$/i.test(file);
+
+            if (
+              privateEnvironmentFile ||
+              /\.(?:key|pem|p12|pfx)$/i.test(file)
+            ) {
+              findings.push(`${file}: private credential file must not be tracked`);
+              continue;
+            }
+
+            if (!textExtensions.has(extname(file).toLowerCase())) continue;
+
+            const absolute = join(root, file);
+            if (statSync(absolute).size > 5_000_000) continue;
+
+            const text = readFileSync(absolute, "utf8");
+
+            for (const [name, pattern] of detectors) {
+              if (pattern.test(text)) findings.push(`${file}: ${name}`);
+            }
+
+            for (
+              const match of text.matchAll(
+                /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+              )
+            ) {
+              try {
+                const payload = JSON.parse(
+                  Buffer.from(
+                    match[0].split(".")[1],
+                    "base64url",
+                  ).toString("utf8"),
+                );
+
+                if (payload.role && payload.role !== "anon") {
+                  findings.push(`${file}: non-anon JWT (${payload.role})`);
+                }
+              } catch {
+                // Not a decodable JWT; the other detectors still apply.
+              }
+            }
+          }
+
+          const publicConfig = readFileSync(
+            join(root, "loyalty", "config.js"),
+            "utf8",
+          );
+
+          if (
+            !/supabaseAnonKey:\s*"sb_publishable_[A-Za-z0-9_-]{20,}"/
+              .test(publicConfig)
+          ) {
+            findings.push(
+              "loyalty/config.js: expected a Supabase publishable key, not a private server credential",
+            );
+          }
+
+          if (findings.length) {
+            console.error(findings.join("\n"));
+            process.exit(1);
+          }
+
+          console.log(
+            `Checked ${tracked.length} tracked loyalty files; no private credential material found.`,
+          );
+          NODE
