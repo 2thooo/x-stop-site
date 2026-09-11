@@ -16,7 +16,7 @@
     .poster::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,2,10,.25), rgba(5,2,10,.04) 40%, rgba(5,2,10,.58)); }
     .poster::after { content: ""; position: absolute; inset: 3.5%; border: 1px solid rgba(255,255,255,.16); border-radius: 3.2vw; pointer-events: none; }
     .brand { position: absolute; z-index: 2; top: 3.2%; left: 50%; transform: translateX(-50%); direction: ltr; display: flex; align-items: center; gap: 1.15vw; }
-    .brand img { width: 6.7vw; height: 6.7vw; object-fit: cover; border: 2px solid rgba(255,255,255,.9); border-radius: 50%; box-shadow: 0 0 34px rgba(101,15,253,.55); }
+    .brand img { width: 8vw; height: 8vw; object-fit: cover; border: 2px solid rgba(255,255,255,.9); border-radius: 50%; box-shadow: 0 0 34px rgba(101,15,253,.55); }
     .brand-copy { display: grid; color: #fff; line-height: 1; }
     .brand-copy strong { font-size: 2.05vw; font-weight: 800; letter-spacing: .08em; }
     .brand-copy span { margin-top: .5vw; color: #cdbcf0; font-size: .76vw; letter-spacing: .17em; }
@@ -39,13 +39,16 @@
     .reward-line strong { display: block; font-size: 1.95vw; line-height: 1.15; }
     .reward-line .en { direction: ltr; color: #fff; text-align: left; letter-spacing: .01em; }
     .reward-line .ar { direction: rtl; color: #fff; text-align: right; }
-    .bottom { position: absolute; z-index: 2; inset: auto 6.5% 5%; display: grid; gap: 1.85vw; }
-    .activities { direction: ltr; display: flex; justify-content: center; gap: 1.55vw; }
-    .activities span { width: 7vw; height: 7vw; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 1.85vw; background: rgba(10,5,17,.82); box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+    .bottom { position: absolute; z-index: 2; inset: auto 6.5% 3.8%; display: grid; gap: 1.65vw; }
+    .activities { direction: ltr; display: flex; justify-content: center; gap: .95vw; }
+    .activities span { width: 5.8vw; height: 5.8vw; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 1.55vw; background: rgba(10,5,17,.82); box-shadow: 0 12px 30px rgba(0,0,0,.35); }
     .activities img { width: 64%; height: 64%; object-fit: contain; }
-    .place { text-align: center; }
-    .place strong { display: block; color: #fff; font-size: 2.05vw; }
-    .place span { direction: ltr; display: block; margin-top: .42vw; color: #d0c3dd; font-size: 1.05vw; font-weight: 700; letter-spacing: .11em; }
+    .place { direction: ltr; display: grid; grid-template-columns: 1fr 1fr; gap: 5vw; max-width: 82%; margin: 0 auto; }
+    .place > div { min-width: 0; }
+    .place .ar { direction: rtl; text-align: right; }
+    .place .en { direction: ltr; text-align: left; }
+    .place strong { display: block; color: #ffd21a; font-size: 1.45vw; }
+    .place span { display: block; margin-top: .42vw; color: #fff; font-size: 1.05vw; line-height: 1.45; font-weight: 700; }
     @page { size: A4 portrait; margin: 0; }
     @media print { .poster { width: 210mm; height: 297mm; } }
   </style>
@@ -79,9 +82,14 @@
         <span><img src="../assets/activity-icons/escape-room.svg" alt="" /></span>
         <span><img src="../assets/activity-icons/billiard.svg" alt="" /></span>
         <span><img src="../assets/activity-icons/gaming.svg" alt="" /></span>
+        <span><img src="../assets/activity-icons/vr.svg" alt="" /></span>
+        <span><img src="../assets/activity-icons/car.svg" alt="" /></span>
         <span><img src="../assets/activity-icons/others.svg" alt="" /></span>
       </div>
-      <div class="place"><strong>رأس الخيمة · الشارقة</strong><span>RAS AL KHAIMAH · SHARJAH</span></div>
+      <div class="place">
+        <div class="ar"><strong>فرعان في رأس الخيمة</strong><span>إكس إنترتينمنت - راك مول<br />ماسترز بولينغ - رأس الخيمة</span></div>
+        <div class="en"><strong>TWO LOCATIONS IN RAK</strong><span>X ENTERTAINMENT - RAK MALL<br />MASTERS BOWLING - RAK</span></div>
+      </div>
     </div>
   </main>
 </body>

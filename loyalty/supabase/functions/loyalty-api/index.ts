@@ -15,19 +15,24 @@ const SERVICE_KEY = internalApiKey();
 const SITE_ORIGIN = Deno.env.get("SITE_ORIGIN") || "http://localhost:4173";
 const SITE_BASE_PATH = (Deno.env.get("SITE_BASE_PATH") || "").replace(/\/$/, "");
 const COUNTRY_CODE = Deno.env.get("DEFAULT_COUNTRY_CODE") || "971";
-const SESSION_DAYS = 30;
+const SESSION_HOURS = 24;
 const MAX_BODY_BYTES = 12000;
+const UPSTREAM_TIMEOUT_MS = 10000;
 const SCAN_TOKEN_MINUTES = 5;
 const DEFAULT_RESET_MINUTES = 15;
 const DEFAULT_ACTIVITY = "laser-tag";
-const ACTIVITY_SLUGS = new Set(["laser-tag", "bowling", "escape-room", "billiard", "gaming", "others"]);
+const ACTIVITY_SLUGS = new Set(["laser-tag", "bowling", "escape-room", "billiard", "gaming", "others", "vr", "car"]);
+const PUBLIC_ACTIONS = new Set(["enroll", "customer-login", "recover-pin", "member-summary", "customer-logout"]);
+const OWNER_ACTIONS = new Set(["owner-check", "owner-dashboard", "owner-member-search", "owner-set-scan-count", "owner-update-activity-settings", "owner-create-pin-reset", "owner-scan", "owner-add-visit-point", "owner-redeem-reward", "owner-cancel-scan"]);
 const ACTIVITY_QR_COLORS: Record<string, string> = {
   "laser-tag": "#8F1542",
   "bowling": "#5B4600",
   "escape-room": "#8A2E22",
   "billiard": "#0D6B4C",
   "gaming": "#204D8A",
-  "others": "#5C2E80"
+  "others": "#5C2E80",
+  "vr": "#4B2A82",
+  "car": "#7A3E00"
 };
 const DUMMY_PIN_SALT = "login-timing-equalizer-v1";
 
@@ -37,7 +42,10 @@ function cors(origin: string | null) {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
     "X-Content-Type-Options": "nosniff",
-    "Cache-Control": "no-store"
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), geolocation=(), microphone=()",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
   };
   if (origin === SITE_ORIGIN) headers["Access-Control-Allow-Origin"] = SITE_ORIGIN;
   return headers;
@@ -72,12 +80,34 @@ function normalizePhoneSearch(input: unknown) {
   return digits;
 }
 
+function normalizeDisplayName(input: unknown) {
+  const value=String(input || "").normalize("NFKC").trim().replace(/\s+/gu," ");
+  if (value.length<1 || value.length>60 || /[\p{Cc}\p{Cf}<>&]/u.test(value)) throw new Error("INVALID_INPUT");
+  if (!/^[\p{L}\p{M}\p{N} .'’\-]+$/u.test(value) || !/[\p{L}\p{N}]/u.test(value)) throw new Error("INVALID_INPUT");
+  return value;
+}
+
+function validNewPin(input: unknown) {
+  const value=String(input || "");
+  if (!/^\d{6}$/.test(value)) throw new Error("INVALID_INPUT");
+  const repeated=new Set(value).size===1;
+  const sequential="0123456789".includes(value) || "9876543210".includes(value);
+  if (repeated || sequential || ["121212","112233","123123","654654","000001","999999"].includes(value)) throw new Error("WEAK_PIN");
+  return value;
+}
+
 function base64url(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 function randomToken(bytes = 32) { const out = new Uint8Array(bytes); crypto.getRandomValues(out); return base64url(out); }
 async function sha256(value: string) { return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)))).map(b => b.toString(16).padStart(2,"0")).join(""); }
+async function rateLimitHash(value: string) {
+  if (!SERVICE_KEY) throw new Error("BACKEND_NOT_CONFIGURED");
+  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(SERVICE_KEY),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  const signature=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(signature)).map(byte=>byte.toString(16).padStart(2,"0")).join("");
+}
 
 function opaqueCode(input: unknown) {
   const value = String(input || "").trim();
@@ -115,7 +145,12 @@ async function readJsonBody(request: Request): Promise<Record<string, unknown>> 
   while (true) {
     const {done,value}=await reader.read(); if (done) break;
     total+=value.byteLength;
-    if (total>MAX_BODY_BYTES) { await reader.cancel(); throw new Error("REQUEST_TOO_LARGE"); }
+    if (total>MAX_BODY_BYTES) {
+      // Do not await cancellation: some reverse proxies keep the cancellation
+      // promise pending until the client finishes uploading the rejected body.
+      void reader.cancel().catch(() => {});
+      throw new Error("REQUEST_TOO_LARGE");
+    }
     chunks.push(value);
   }
   const bytes=new Uint8Array(total); let offset=0;
@@ -139,9 +174,16 @@ function safeEqual(a: string, b: string) {
 
 async function rpc(name: string, body: Record<string, unknown>) {
   if (!SERVICE_KEY) throw new Error("BACKEND_NOT_CONFIGURED");
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-    method: "POST", headers: { "Content-Type":"application/json", "apikey":SERVICE_KEY }, body: JSON.stringify(body)
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: "POST", headers: { "Content-Type":"application/json", "apikey":SERVICE_KEY }, body: JSON.stringify(body),
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS)
+    });
+  } catch (error) {
+    if ((error as Error)?.name === "TimeoutError" || (error as Error)?.name === "AbortError") throw new Error("BACKEND_TIMEOUT");
+    throw error;
+  }
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.message || "BACKEND_ERROR");
   return data;
@@ -155,22 +197,46 @@ function clientAddress(request: Request) {
 }
 
 async function enforcePbkdfBudget(request: Request) {
-  const ipHash=await sha256(`pbkdf:ip:${clientAddress(request)}`);
+  const ipHash=await rateLimitHash(`pbkdf:ip:${clientAddress(request)}`);
   const allowed=await rpc("consume_pbkdf_budget",{p_identifier_hash:ipHash});
   if (allowed!==true) throw new Error("AUTH_BLOCKED");
 }
 
 async function enforceEnrollmentBudget(request: Request) {
-  const ipHash=await sha256(`enroll:ip:${clientAddress(request)}`);
+  const ipHash=await rateLimitHash(`enroll:ip:${clientAddress(request)}`);
   const allowed=await rpc("consume_auth_budget",{p_identifier_hash:ipHash,p_limit:20,p_window_seconds:3600});
   if (allowed!==true) throw new Error("ENROLLMENT_BLOCKED");
+}
+
+async function enforceMemberSummaryBudget(request: Request, sessionToken: string) {
+  const ipHash=await rateLimitHash(`summary:ip:${clientAddress(request)}`);
+  const ipAllowed=await rpc("consume_auth_budget",{p_identifier_hash:ipHash,p_limit:120,p_window_seconds:60});
+  if (ipAllowed!==true) throw new Error("SUMMARY_BLOCKED");
+  const sessionHash=await rateLimitHash(`summary:session:${sessionToken}`);
+  const sessionAllowed=await rpc("consume_auth_budget",{p_identifier_hash:sessionHash,p_limit:30,p_window_seconds:60});
+  if (sessionAllowed!==true) throw new Error("SUMMARY_BLOCKED");
+}
+
+async function enforceOwnerSearchBudget(request: Request, actor: string) {
+  const identifierHash=await rateLimitHash(`owner-search:${actor}:${clientAddress(request)}`);
+  const allowed=await rpc("consume_auth_budget",{p_identifier_hash:identifierHash,p_limit:60,p_window_seconds:60});
+  if (allowed!==true) throw new Error("OWNER_SEARCH_BLOCKED");
 }
 
 async function verifyOwner(request: Request) {
   if (!SERVICE_KEY) throw new Error("BACKEND_NOT_CONFIGURED");
   const bearer = request.headers.get("Authorization") || "";
   if (!bearer.startsWith("Bearer ") || bearer === `Bearer ${SERVICE_KEY}`) throw new Error("OWNER_REQUIRED");
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { "apikey": SERVICE_KEY, "Authorization": bearer } });
+  let response: Response;
+  try {
+    response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { "apikey": SERVICE_KEY, "Authorization": bearer },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS)
+    });
+  } catch (error) {
+    if ((error as Error)?.name === "TimeoutError" || (error as Error)?.name === "AbortError") throw new Error("BACKEND_TIMEOUT");
+    throw error;
+  }
   if (!response.ok) throw new Error("OWNER_REQUIRED");
   const user = await response.json();
   await rpc("owner_check", { p_actor: user.id });
@@ -181,10 +247,13 @@ function publicError(error: unknown) {
   const message = String((error as Error)?.message || "");
   if (message.includes("REQUEST_TOO_LARGE")) return ["Request too large.", 413] as const;
   if (message.includes("INVALID_JSON")) return ["Send a valid JSON object.", 400] as const;
-  if (message.includes("ACCOUNT_EXISTS")) return ["An account already exists for that phone number.", 409] as const;
+  if (message.includes("ACCOUNT_EXISTS")) return ["Check the information or sign in to your existing passport.", 400] as const;
   if (message.includes("MEMBER_CODE_UNAVAILABLE")) return ["A unique member code could not be created. Please try again.", 503] as const;
   if (message.includes("ENROLLMENT_BLOCKED")) return ["Too many new accounts were created from this connection. Try again later.", 429] as const;
   if (message.includes("AUTH_BLOCKED")) return ["Too many attempts. Try again in 15 minutes.", 429] as const;
+  if (message.includes("SUMMARY_BLOCKED")) return ["Too many passport refreshes. Wait a minute and try again.", 429] as const;
+  if (message.includes("OWNER_SEARCH_BLOCKED")) return ["Too many member searches. Wait a minute and try again.", 429] as const;
+  if (message.includes("WEAK_PIN")) return ["Choose a less predictable 6-digit PIN.", 400] as const;
   if (message.includes("LOGIN_FAILED")) return ["Phone number or PIN is incorrect.", 401] as const;
   if (message.includes("OWNER_REQUIRED")) return ["Owner authorization is required.", 403] as const;
   if (message.includes("SCAN_COOLDOWN")) return ["This card was scanned moments ago. Please wait before scanning again.", 429] as const;
@@ -207,64 +276,70 @@ function publicError(error: unknown) {
   if (message.includes("ACTIVITY_SETTINGS_CHANGED")) return ["This activity's reward settings changed. Scan the refreshed customer card again.", 409] as const;
   if (message.includes("SCAN_COUNT_INTEGRITY")) return ["This member's scan-count history needs administrator review.", 409] as const;
   if (message.includes("INVALID_INPUT")) return ["Check the information and try again.", 400] as const;
+  if (message.includes("BACKEND_TIMEOUT")) return ["The service took too long to respond. Try again.", 503] as const;
   return ["The request could not be completed.", 500] as const;
 }
 
 Deno.serve(async request => {
   const origin = request.headers.get("Origin");
   if (request.method === "OPTIONS") return new Response(null, { status: origin === SITE_ORIGIN ? 204 : 403, headers: cors(origin) });
-  if (request.method !== "POST" || !request.headers.get("content-type")?.includes("application/json")) return json({error:"Invalid request."},405,origin);
+  if (request.method !== "POST") return json({error:"Invalid request."},405,origin);
+  const mediaType=(request.headers.get("content-type") || "").split(";",1)[0].trim().toLowerCase();
+  if (mediaType !== "application/json") return json({error:"Invalid request."},415,origin);
   if (origin && origin !== SITE_ORIGIN) return json({error:"Origin not allowed."},403,origin);
   if (Number(request.headers.get("content-length") || 0) > MAX_BODY_BYTES) return json({error:"Request too large."},413,origin);
 
   try {
     const body = await readJsonBody(request);
     const action = String(body.action || "");
+    if (!PUBLIC_ACTIONS.has(action) && !OWNER_ACTIONS.has(action)) throw new Error("INVALID_INPUT");
 
     if (action === "enroll") {
-      if (body.consent !== true || !/^\d{6}$/.test(String(body.pin || "")) || !String(body.displayName || "").trim() || String(body.displayName).length > 60) throw new Error("INVALID_INPUT");
-      const phone = normalizePhone(body.phone); const pin = String(body.pin); const salt = randomToken(18);
+      if (body.consent !== true) throw new Error("INVALID_INPUT");
+      const phone = normalizePhone(body.phone); const pin = validNewPin(body.pin); const displayName=normalizeDisplayName(body.displayName); const salt = randomToken(18);
       await enforceEnrollmentBudget(request);
       await enforcePbkdfBudget(request);
       const qrToken = randomToken(); const sessionToken = randomToken();
-      const result = await rpc("enroll_customer_open", { p_phone:phone, p_display_name:String(body.displayName).trim(), p_pin_salt:salt, p_pin_hash:await pinHash(pin,salt), p_qr_hash:await sha256(qrToken), p_session_hash:await sha256(sessionToken), p_session_expiry:new Date(Date.now()+SESSION_DAYS*86400000).toISOString() });
+      const result = await rpc("enroll_customer_open", { p_phone:phone, p_display_name:displayName, p_pin_salt:salt, p_pin_hash:await pinHash(pin,salt), p_qr_hash:await sha256(qrToken), p_session_hash:await sha256(sessionToken), p_session_expiry:new Date(Date.now()+SESSION_HOURS*3600000).toISOString() });
       return json({ sessionToken, qrToken, memberCode: result[0].member_code },201,origin);
     }
 
     if (action === "customer-login") {
       const phone=normalizePhone(body.phone); const pin=String(body.pin || ""); if (!/^\d{6}$/.test(pin)) throw new Error("INVALID_INPUT");
       await enforcePbkdfBudget(request);
-      const identifierHash=await sha256(`login:${phone}`); const allowed=await rpc("consume_auth_attempt",{p_identifier_hash:identifierHash}); if (allowed !== true) throw new Error("AUTH_BLOCKED");
+      const identifierHash=await rateLimitHash(`login:${phone}`); const allowed=await rpc("consume_auth_attempt",{p_identifier_hash:identifierHash}); if (allowed !== true) throw new Error("AUTH_BLOCKED");
       const records=await rpc("get_customer_auth_record",{p_phone:phone}); const customer=records?.[0];
       const candidateHash=await pinHash(pin,customer?.pin_salt || DUMMY_PIN_SALT);
       if (!customer || customer.status !== "active" || !safeEqual(candidateHash,customer.pin_hash)) throw new Error("LOGIN_FAILED");
       const qrToken=randomToken(); const sessionToken=randomToken();
-      await rpc("rotate_customer_access_for_login",{p_customer_id:customer.customer_id,p_expected_pin_hash:customer.pin_hash,p_qr_hash:await sha256(qrToken),p_session_hash:await sha256(sessionToken),p_session_expiry:new Date(Date.now()+SESSION_DAYS*86400000).toISOString(),p_identifier_hash:identifierHash});
+      await rpc("rotate_customer_access_for_login",{p_customer_id:customer.customer_id,p_expected_pin_hash:customer.pin_hash,p_qr_hash:await sha256(qrToken),p_session_hash:await sha256(sessionToken),p_session_expiry:new Date(Date.now()+SESSION_HOURS*3600000).toISOString(),p_identifier_hash:identifierHash});
       return json({sessionToken,qrToken},200,origin);
     }
 
     if (action === "recover-pin") {
       const phone=normalizePhone(body.phone); const resetCode=opaqueCode(body.resetCode);
-      const newPin=String(body.newPin || ""); if (!/^\d{6}$/.test(newPin)) throw new Error("INVALID_INPUT");
+      const newPin=validNewPin(body.newPin);
       await enforcePbkdfBudget(request);
-      const identifierHash=await sha256(`recover:${phone}`);
+      const identifierHash=await rateLimitHash(`recover:${phone}`);
       const allowed=await rpc("consume_auth_attempt",{p_identifier_hash:identifierHash}); if (allowed !== true) throw new Error("AUTH_BLOCKED");
       const salt=randomToken(18); const qrToken=randomToken(); const sessionToken=randomToken();
       const result=await rpc("recover_customer_pin",{
         p_phone:phone,p_code_hash:await sha256(resetCode),p_pin_salt:salt,p_pin_hash:await pinHash(newPin,salt),
         p_qr_hash:await sha256(qrToken),p_session_hash:await sha256(sessionToken),
-        p_session_expiry:new Date(Date.now()+SESSION_DAYS*86400000).toISOString(),
-        p_recovery_identifier_hash:identifierHash,p_login_identifier_hash:await sha256(`login:${phone}`)
+        p_session_expiry:new Date(Date.now()+SESSION_HOURS*3600000).toISOString(),
+        p_recovery_identifier_hash:identifierHash,p_login_identifier_hash:await rateLimitHash(`login:${phone}`)
       });
       return json({sessionToken,qrToken,memberCode:result[0].member_code},200,origin);
     }
 
     if (action === "member-summary") {
       if (!body.sessionToken || !body.qrToken) throw new Error("SESSION_INVALID");
+      const sessionToken=opaqueCode(body.sessionToken); const qrToken=opaqueCode(body.qrToken);
+      await enforceMemberSummaryBudget(request,sessionToken);
       const selectedActivity=activitySlug(body.activitySlug); const scanToken=randomToken();
       const scanTokenExpiresAt=new Date(Date.now()+SCAN_TOKEN_MINUTES*60000).toISOString();
-      const result=await rpc("member_summary_v2",{
-        p_session_hash:await sha256(String(body.sessionToken)),p_qr_hash:await sha256(String(body.qrToken)),
+      const result=await rpc("member_summary_v3",{
+        p_session_hash:await sha256(sessionToken),p_qr_hash:await sha256(qrToken),
         p_activity_slug:selectedActivity,p_scan_token_hash:await sha256(scanToken),p_scan_token_expiry:scanTokenExpiresAt
       }); const row=result[0];
       const payload=`${SITE_ORIGIN}${SITE_BASE_PATH}/#/scan/${scanToken}`;
@@ -279,6 +354,12 @@ Deno.serve(async request => {
       },200,origin);
     }
 
+    if (action === "customer-logout") {
+      const sessionToken=opaqueCode(body.sessionToken); const qrToken=opaqueCode(body.qrToken);
+      await rpc("logout_customer",{p_session_hash:await sha256(sessionToken),p_qr_hash:await sha256(qrToken)});
+      return json({ok:true},200,origin);
+    }
+
     const actor=await verifyOwner(request);
     if (action === "owner-check") return json({ok:true},200,origin);
     if (action === "owner-dashboard") {
@@ -287,6 +368,7 @@ Deno.serve(async request => {
       return json(await rpc("owner_dashboard",{p_actor:actor,p_customer_limit:customerLimit,p_customer_offset:customerOffset}),200,origin);
     }
     if (action === "owner-member-search") {
+      await enforceOwnerSearchBudget(request,actor);
       const phone=normalizePhoneSearch(body.phone);
       return json(await rpc("owner_search_members",{p_actor:actor,p_phone_query:phone}),200,origin);
     }

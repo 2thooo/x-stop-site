@@ -11,3 +11,7 @@ The bundled Tajawal Arabic and Latin webfonts come from the [Google Fonts Tajawa
 ## jsQR
 
 The bundled `src/vendor/jsQR.js` decoder is jsQR 1.4.0 by Cozmo, distributed under the Apache License 2.0. The complete upstream license is in `src/vendor/jsQR.LICENSE.txt`.
+
+## Tabler Icons
+
+The VR and Car activity icons are adapted from [Tabler Icons](https://github.com/tabler/tabler-icons) 3.46.0 by Paweł Kuna, distributed under the MIT License. The complete upstream license is in `assets/Tabler-Icons-MIT.txt`.

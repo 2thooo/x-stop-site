@@ -1,4 +1,4 @@
-import { normalizePhone, validatePin, escapeHtml, randomIdempotencyKey, parseQrPayload } from "./core.js";
+import { normalizePhone, validatePin, validateNewPin, escapeHtml, randomIdempotencyKey, parseQrPayload } from "./core.js";
 import { callApi, ownerLogin, isConfigured } from "./api.js";
 import { applyDocumentLanguage, getLanguage, setLanguage, t, activityName, activityLine, countLabel, eventActionLabel, formatDubaiDateTime, localizeError } from "./i18n.js";
 
@@ -8,26 +8,102 @@ const toast = document.querySelector("#toast");
 const customerKey = "x_loyalty_customer_session";
 const qrKey = "x_loyalty_qr_credential";
 const lastActivityKey = "x_loyalty_last_activity";
+const privilegedRoutes = new Set(["owner", "admin", "dashboard", "scanner", "scan"]);
+const ownerIdleLimitMs = 10 * 60 * 1000;
+const ownerBackgroundLimitMs = 60 * 1000;
+const credentialFallback = new Map();
 const activities = Object.freeze([
   { slug: "laser-tag", icon: "assets/activity-icons/laser-tag.svg" },
   { slug: "bowling", icon: "assets/activity-icons/bowling.svg" },
   { slug: "escape-room", icon: "assets/activity-icons/escape-room.svg" },
   { slug: "billiard", icon: "assets/activity-icons/billiard.svg" },
   { slug: "gaming", icon: "assets/activity-icons/gaming.svg" },
-  { slug: "others", icon: "assets/activity-icons/others.svg" }
+  { slug: "others", icon: "assets/activity-icons/others.svg" },
+  { slug: "vr", icon: "assets/activity-icons/vr.svg" },
+  { slug: "car", icon: "assets/activity-icons/car.svg" }
 ]);
 const bookingVenues = Object.freeze(Array.isArray(config.bookingVenues) ? config.bookingVenues : []);
 
 let installPrompt = null;
 let scannerStream = null;
 let scannerTimer = null;
+let scannerStarting = false;
+let scannerDetectionInFlight = false;
+let scannerGeneration = 0;
 let scanLookupInFlight = false;
 let renderGeneration = 0;
 let ownerAccessToken = null;
+let ownerLastActivityAt = 0;
+let ownerHiddenAt = 0;
 let pendingScanToken = "";
 let ownerMemberSearchState = { query: "", members: null, status: "idle" };
 
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+function credentialGet(key) {
+  try { return window.sessionStorage.getItem(key) || credentialFallback.get(key) || null; }
+  catch { return credentialFallback.get(key) || null; }
+}
+
+function credentialSet(key, value) {
+  credentialFallback.set(key, String(value));
+  try { window.sessionStorage.setItem(key, String(value)); } catch {}
+}
+
+function credentialRemove(key) {
+  credentialFallback.delete(key);
+  try { window.sessionStorage.removeItem(key); } catch {}
+}
+
+function migrateLegacyCustomerCredentials() {
+  for (const key of [customerKey, qrKey]) {
+    try {
+      const legacy = window.localStorage.getItem(key);
+      if (legacy && !credentialGet(key)) credentialSet(key, legacy);
+      window.localStorage.removeItem(key);
+    } catch {}
+  }
+}
+
+function saveCustomerAccess(sessionToken, qrToken) {
+  credentialSet(customerKey, sessionToken);
+  credentialSet(qrKey, qrToken);
+}
+
+function clearCustomerAccess(clearActivity = false) {
+  credentialRemove(customerKey);
+  credentialRemove(qrKey);
+  try {
+    window.localStorage.removeItem(customerKey);
+    window.localStorage.removeItem(qrKey);
+    if (clearActivity) window.localStorage.removeItem(lastActivityKey);
+  } catch {}
+}
+
+function clearOwnerAccess() {
+  ownerAccessToken = null;
+  ownerLastActivityAt = 0;
+  ownerHiddenAt = 0;
+  pendingScanToken = "";
+  ownerMemberSearchState = { query: "", members: null, status: "idle" };
+  stopScanner();
+}
+
+function touchOwnerAccess() {
+  if (ownerAccessToken) ownerLastActivityAt = Date.now();
+}
+
+function navigateTo(route) {
+  const nextHash = `#/${route}`;
+  if (location.hash === nextHash) void render();
+  else location.hash = nextHash;
+}
+
+function currentRoute() {
+  return location.hash.replace(/^#\//, "").split("/")[0] || "passport";
+}
+
+migrateLegacyCustomerCredentials();
 
 function applyLanguageShell() {
   applyDocumentLanguage();
@@ -54,10 +130,11 @@ if (phoneElement) {
 window.addEventListener("beforeinstallprompt", event => { event.preventDefault(); installPrompt = event; });
 window.addEventListener("hashchange", render);
 document.querySelector("#language-toggle")?.addEventListener("click", event => {
+  const toggleButton = event.currentTarget;
   setLanguage(getLanguage() === "ar" ? "en" : "ar");
   applyLanguageShell();
   render();
-  window.requestAnimationFrame(() => event.currentTarget.focus());
+  window.requestAnimationFrame(() => toggleButton.focus());
   showToast(t("language.changed"));
 });
 document.querySelector(".skip-link")?.addEventListener("click", event => {
@@ -67,12 +144,40 @@ document.querySelector(".skip-link")?.addEventListener("click", event => {
 });
 document.addEventListener("click", event => {
   const route = event.target.closest("[data-route]")?.dataset.route;
-  if (route) {
-    const nextHash = `#/${route}`;
-    if (location.hash === nextHash) render();
-    else location.hash = nextHash;
+  if (route) navigateTo(route);
+});
+for (const eventName of ["pointerdown", "keydown", "touchstart"]) {
+  document.addEventListener(eventName, () => {
+    if (ownerAccessToken && privilegedRoutes.has(currentRoute())) touchOwnerAccess();
+  }, { passive: true });
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    ownerHiddenAt = Date.now();
+    stopScanner();
+    return;
+  }
+  if (ownerAccessToken && ownerHiddenAt && Date.now() - ownerHiddenAt >= ownerBackgroundLimitMs) {
+    clearOwnerAccess();
+    navigateTo("admin");
+    showToast(t("dashboard.sessionExpired"));
+  } else {
+    touchOwnerAccess();
+    ownerHiddenAt = 0;
   }
 });
+window.addEventListener("pagehide", () => {
+  const privileged = privilegedRoutes.has(currentRoute());
+  clearOwnerAccess();
+  if (privileged) app.innerHTML = `<div class="loading">${escapeHtml(t("dashboard.loading"))}</div>`;
+});
+window.addEventListener("pageshow", event => { if (event.persisted) void render(); });
+window.setInterval(() => {
+  if (!ownerAccessToken || Date.now() - ownerLastActivityAt < ownerIdleLimitMs) return;
+  clearOwnerAccess();
+  navigateTo("admin");
+  showToast(t("dashboard.sessionExpired"));
+}, 30000);
 if ("serviceWorker" in navigator) {
   const localPreview = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   const workerUrl = localPreview ? "./sw.js" : `${config.basePath || ""}/sw.js`;
@@ -115,6 +220,16 @@ function bookingLink(venue, label, activityName = "", className = "button whatsa
   return `<a class="${escapeHtml(className)}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(accessible)}"><span class="chat-mark" aria-hidden="true">↗</span>${escapeHtml(label)}</a>`;
 }
 function safeNumber(value) { const number = Number(value); return Number.isFinite(number) ? number : 0; }
+function svgImageMarkup(svg, alt, className = "") {
+  const source = String(svg || "").trim();
+  if (!/^<svg(?:\s|>)/i.test(source) || source.length > 200000) return "";
+  const bytes = new TextEncoder().encode(source);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  const imageUrl = `data:image/svg+xml;base64,${btoa(binary)}`;
+  const classAttribute = className ? ` class="${escapeHtml(className)}"` : "";
+  return `<img${classAttribute} src="${escapeHtml(imageUrl)}" alt="${escapeHtml(alt)}" decoding="async" />`;
+}
 function eventChange(event) {
   const rewardDelta = safeNumber(event.rewardDelta);
   if (rewardDelta) return `${rewardDelta > 0 ? "+" : "−"}${countLabel(Math.abs(rewardDelta), "reward")}`;
@@ -193,8 +308,8 @@ function renderActivityRail(selectedSlug, balances) {
 }
 
 async function memberView(selectedSlug = activities[0].slug, generation = renderGeneration) {
-  const sessionToken = localStorage.getItem(customerKey);
-  const qrToken = localStorage.getItem(qrKey);
+  const sessionToken = credentialGet(customerKey);
+  const qrToken = credentialGet(qrKey);
   if (!sessionToken || !qrToken) { location.hash = "#/login"; return; }
   const activity = activityMeta(selectedSlug);
   app.innerHTML = `<div class="loading">${escapeHtml(t("member.loading", { activity: activity.name }))}</div>`;
@@ -220,7 +335,7 @@ async function memberView(selectedSlug = activities[0].slug, generation = render
     const redemptionAction = rewardsAvailable > 0 ? `<div class="redeem-customer"><button id="request-redeem" class="button reward-button" type="button">${escapeHtml(t("member.redeem"))}</button><span>${escapeHtml(t("member.redeemHint"))}</span></div>` : "";
     app.innerHTML = `<section class="shell wide"><div class="panel-head"><div><p class="eyebrow">${escapeHtml(t("login.eyebrow"))}</p><h2>${escapeHtml(t("member.welcome", { name: data.displayName }))}</h2><p class="subtle">${escapeHtml(t("member.number", { code: data.memberCode }))}</p></div><button id="customer-logout" class="button ghost">${escapeHtml(t("common.signOut"))}</button></div>${renderActivityRail(selected.slug, data.activityBalances)}<div class="member-grid">
       <article class="panel member-card activity-theme-${selected.slug}"><div class="member-card-head"><div class="member-activity"><img src="${selected.icon}" alt="" width="56" height="56" /><div><span>${escapeHtml(t("member.selected"))}</span><strong>${escapeHtml(selected.name)}</strong></div></div></div><div class="points"><strong>${points}</strong><span>${escapeHtml(t("member.points"))}</span></div><progress value="${progressValue}" max="${threshold}" aria-label="${escapeHtml(t("member.progressAria", { current: progressValue, target: threshold }))}"></progress><div class="reward-row"><span>${escapeHtml(t("member.progress", { current: progressValue, target: threshold }))}</span><span>${escapeHtml(t("member.available", { count: rewardsAvailable }))}</span></div><p class="member-reward-copy">${escapeHtml(rewardText)}</p>${redemptionAction}<p class="subtle member-last-visit">${escapeHtml(t("member.lastVisit", { activity: selected.name, date: formatDubaiDateTime(data.lastScannedAt) }))}</p>${bookingActions}</article>
-      <article id="member-qr-panel" class="panel qr-panel activity-theme-${selected.slug}"><div class="qr-panel-head"><div><p class="eyebrow">${escapeHtml(t("member.qrEyebrow"))}</p><h3 id="member-qr-title">${escapeHtml(t("member.qrTitle"))}</h3></div><div class="qr-brand-lockup" aria-label="${escapeHtml(`${config.business.shortName || "X Group"} · ${selected.name}`)}"><img class="qr-brand-logo" src="assets/x-group-logo.jpg" alt="X Group" width="44" height="44" /><span class="qr-brand-activity"><img src="${selected.icon}" alt="" width="28" height="28" /><strong>${escapeHtml(selected.name)}</strong></span></div></div><div class="qr-stage"><div class="qr-wrap">${data.qrSvg || ""}</div><div class="qr-stage-label"><span aria-hidden="true"></span>${escapeHtml(config.business.shortName || "X Group")} · ${escapeHtml(selected.name)}</div></div><div class="qr-meta"><span>${escapeHtml(t("member.forActivity", { activity: selected.name }))}</span><span>${escapeHtml(t("member.expires", { date: formatDubaiDateTime(data.scanTokenExpiresAt) }))}</span></div><p class="hint">${escapeHtml(t("member.qrHint"))}</p><div class="actions"><button id="refresh-code" class="button secondary">${escapeHtml(t("member.refresh"))}</button><button id="install-button" class="button ghost">${escapeHtml(t("member.install"))}</button></div></article>
+      <article id="member-qr-panel" class="panel qr-panel activity-theme-${selected.slug}"><div class="qr-panel-head"><div><p class="eyebrow">${escapeHtml(t("member.qrEyebrow"))}</p><h3 id="member-qr-title">${escapeHtml(t("member.qrTitle"))}</h3></div><div class="qr-brand-lockup" aria-label="${escapeHtml(`${config.business.shortName || "X Group"} · ${selected.name}`)}"><img class="qr-brand-logo" src="assets/x-group-logo.jpg" alt="X Group" width="44" height="44" /><span class="qr-brand-activity"><img src="${selected.icon}" alt="" width="28" height="28" /><strong>${escapeHtml(selected.name)}</strong></span></div></div><div class="qr-stage"><div class="qr-wrap">${svgImageMarkup(data.qrSvg, t("member.qrTitle"), "qr-image")}</div><div class="qr-stage-label"><span aria-hidden="true"></span>${escapeHtml(config.business.shortName || "X Group")} · ${escapeHtml(selected.name)}</div></div><div class="qr-meta"><span>${escapeHtml(t("member.forActivity", { activity: selected.name }))}</span><span>${escapeHtml(t("member.expires", { date: formatDubaiDateTime(data.scanTokenExpiresAt) }))}</span></div><p class="hint">${escapeHtml(t("member.qrHint"))}</p><div class="actions"><button id="refresh-code" class="button secondary">${escapeHtml(t("member.refresh"))}</button><button id="install-button" class="button ghost">${escapeHtml(t("member.install"))}</button></div></article>
     </div></section>`;
     document.querySelectorAll("[data-activity]").forEach(button => button.addEventListener("click", () => { localStorage.setItem(lastActivityKey, button.dataset.activity); location.hash = `#/member/${button.dataset.activity}`; }));
     settleViewPosition();
@@ -238,11 +353,17 @@ async function memberView(selectedSlug = activities[0].slug, generation = render
       qrPanel?.scrollIntoView({ behavior: "smooth", block: "center" });
       showToast(t("member.redeemReady"));
     });
-    document.querySelector("#customer-logout")?.addEventListener("click", () => { localStorage.removeItem(customerKey); localStorage.removeItem(qrKey); localStorage.removeItem(lastActivityKey); location.hash = "#/passport"; });
+    document.querySelector("#customer-logout")?.addEventListener("click", () => {
+      const logoutSession = credentialGet(customerKey);
+      const logoutQr = credentialGet(qrKey);
+      clearCustomerAccess(true);
+      navigateTo("passport");
+      if (logoutSession && logoutQr) void callApi("customer-logout", { sessionToken: logoutSession, qrToken: logoutQr }).catch(() => {});
+    });
   } catch (error) {
     if (generation !== renderGeneration) return;
     const expired = /session|sign in|replaced/i.test(error.message);
-    if (expired) { localStorage.removeItem(customerKey); localStorage.removeItem(qrKey); }
+    if (expired) clearCustomerAccess();
     app.innerHTML = `<section class="shell narrow"><div class="panel"><p class="eyebrow">${escapeHtml(t("member.unavailable"))}</p><h2>${escapeHtml(t("member.cannotOpen"))}</h2><p>${escapeHtml(localizeError(error))}</p><div class="actions"><button class="button primary" data-route="${expired ? "passport" : `member/${activity.slug}`}">${escapeHtml(expired ? t("member.signInAgain") : t("common.retry"))}</button><button class="button secondary" data-route="book">${escapeHtml(t("home.book"))}</button></div></div></section>`;
     settleViewPosition();
   }
@@ -272,10 +393,9 @@ function phoneSearchDigits(value) {
 
 function ownerSessionEnded(error) {
   if (error?.status !== 401 && error?.status !== 403) return false;
-  ownerAccessToken = null;
-  ownerMemberSearchState = { query: "", members: null, status: "idle" };
+  clearOwnerAccess();
   showToast(t("dashboard.sessionExpired"));
-  location.hash = "#/admin";
+  navigateTo("admin");
   return true;
 }
 
@@ -483,7 +603,7 @@ async function dashboardView(generation = renderGeneration, customerOffset = 0) 
       <div class="panel history-panel"><div class="panel-head"><div><h3>${escapeHtml(t("dashboard.history"))}</h3><span class="subtle">${escapeHtml(t("dashboard.historyHint"))}</span></div></div><div class="table-wrap"><table><thead><tr><th>${escapeHtml(t("dashboard.thTime"))}</th><th>${escapeHtml(t("dashboard.thMember"))}</th><th>${escapeHtml(t("dashboard.thActivity"))}</th><th>${escapeHtml(t("dashboard.thEvent"))}</th><th>${escapeHtml(t("dashboard.thChange"))}</th><th>${escapeHtml(t("dashboard.thBalance"))}</th></tr></thead><tbody>${(data.recentEvents || []).map(event => `<tr><td>${escapeHtml(formatDubaiDateTime(event.occurredAt))}</td><td>${escapeHtml(event.displayName)}<br><bdi class="hint" dir="ltr">${escapeHtml(event.memberCode)}</bdi></td><td>${escapeHtml(activityName(event.activitySlug))}</td><td>${escapeHtml(eventActionLabel(event.action))}</td><td>${escapeHtml(eventChange(event))}</td><td><bdi dir="ltr">${safeNumber(event.balanceBefore)} → ${safeNumber(event.balanceAfter)}</bdi></td></tr>`).join("") || `<tr><td colspan="6" class="empty">${escapeHtml(t("dashboard.noActivity"))}</td></tr>`}</tbody></table></div></div>
       </section>`;
     settleViewPosition();
-    document.querySelector("#owner-logout")?.addEventListener("click", () => { ownerAccessToken = null; ownerMemberSearchState = { query: "", members: null, status: "idle" }; location.hash = "#/"; });
+    document.querySelector("#owner-logout")?.addEventListener("click", () => { clearOwnerAccess(); navigateTo("passport"); });
     bindOwnerMemberSearch();
     document.querySelectorAll(".reset-pin").forEach(button => button.addEventListener("click", () => createResetCode(button)));
     bindActivitySettings(activitySettings);
@@ -501,7 +621,8 @@ async function createResetCode(button) {
   button.disabled = true;
   try {
     const data = await callApi("owner-create-pin-reset", { customerId: button.dataset.customerId, expiresInMinutes: 15 }, ownerAccessToken);
-    const qr = data.resetQrSvg ? `<div class="code-qr">${data.resetQrSvg}</div>` : "";
+    const qrImage = svgImageMarkup(data.resetQrSvg, t("reset.title", { name: data.displayName }), "reset-qr-image");
+    const qr = qrImage ? `<div class="code-qr">${qrImage}</div>` : "";
     result.innerHTML = `<div class="notice reset-notice"><strong>${escapeHtml(t("reset.title", { name: data.displayName }))}</strong><div class="setup-code-grid">${qr}<div><bdi class="code-display compact" dir="ltr">${escapeHtml(data.resetCode)}</bdi><span>${escapeHtml(t("reset.instructions", { date: formatDubaiDateTime(data.expiresAt) }))}</span><button class="button ghost copy-code" data-code="${escapeHtml(data.resetCode)}">${escapeHtml(t("reset.copy"))}</button></div></div></div>`;
     result.querySelector(".copy-code")?.addEventListener("click", copyCode);
     result.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -556,18 +677,30 @@ async function installApp() {
   showToast(isiOS ? t("install.ios") : t("install.other"));
 }
 
-async function startScanner() {
+async function startScanner(event) {
   const video = document.querySelector("#scanner-video");
+  const startButton = event?.currentTarget || document.querySelector("#start-scanner");
   const supportsNativeDetector = "BarcodeDetector" in window;
   const supportsFallbackDetector = typeof window.jsQR === "function";
   if (!supportsNativeDetector && !supportsFallbackDetector) { showToast(t("scanner.cameraFallback")); return; }
+  if (!video || scannerStarting || scannerStream) return;
+  const attempt = ++scannerGeneration;
+  scannerStarting = true;
+  if (startButton) startButton.disabled = true;
   try {
-    scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-    video.srcObject = scannerStream; await video.play();
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    if (attempt !== scannerGeneration || !video.isConnected) {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+    scannerStream = stream;
+    video.srcObject = stream; await video.play();
     const detector = supportsNativeDetector ? new BarcodeDetector({ formats: ["qr_code"] }) : null;
     const canvas = supportsFallbackDetector ? document.createElement("canvas") : null;
     const context = canvas?.getContext("2d", { willReadFrequently: true });
     scannerTimer = window.setInterval(async () => {
+      if (scannerDetectionInFlight || attempt !== scannerGeneration) return;
+      scannerDetectionInFlight = true;
       try {
         let rawValue = "";
         if (detector) {
@@ -585,19 +718,36 @@ async function startScanner() {
         }
         if (rawValue) { stopScanner(); await lookupCode(rawValue); }
       } catch {}
+      finally { scannerDetectionInFlight = false; }
     }, 650);
-  } catch { showToast(t("scanner.cameraUnavailable")); }
+  } catch {
+    stopScanner();
+    showToast(t("scanner.cameraUnavailable"));
+  }
+  finally {
+    scannerStarting = false;
+    if (startButton?.isConnected && !scannerStream) startButton.disabled = false;
+  }
 }
 function stopScanner() {
+  scannerGeneration += 1;
   if (scannerTimer) window.clearInterval(scannerTimer);
   scannerTimer = null;
   scannerStream?.getTracks().forEach(track => track.stop());
+  const video = document.querySelector("#scanner-video");
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+  }
   scannerStream = null;
+  scannerStarting = false;
+  scannerDetectionInFlight = false;
 }
 
 async function lookupCode(raw) {
   const result = document.querySelector("#scan-result");
   if (!result || scanLookupInFlight) return;
+  stopScanner();
   scanLookupInFlight = true;
   let scanLoaded = false;
   const lookupButton = document.querySelector("#lookup-code");
@@ -650,22 +800,22 @@ function setTransactionActionsDisabled(container, disabled) {
 function bindForms(route) {
   if (route === "join") document.querySelector("#join-form")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#join-error"); errorElement.textContent = "";
-    try { const pin = validatePin(form.get("pin")); if (pin !== form.get("pinConfirm")) throw new Error("PINs do not match."); const data = await callApi("enroll", { displayName: form.get("name"), phone: normalizePhone(form.get("phone")), pin, consent: form.get("consent") === "on" }); localStorage.setItem(customerKey, data.sessionToken); localStorage.setItem(qrKey, data.qrToken); location.hash = "#/member/laser-tag"; }
+    try { const pin = validateNewPin(form.get("pin")); if (pin !== form.get("pinConfirm")) throw new Error("PINs do not match."); const data = await callApi("enroll", { displayName: form.get("name"), phone: normalizePhone(form.get("phone")), pin, consent: form.get("consent") === "on" }); saveCustomerAccess(data.sessionToken, data.qrToken); location.hash = "#/member/laser-tag"; }
     catch (error) { errorElement.textContent = localizeError(error); setFormBusy(formElement, false); }
   });
   if (route === "login") document.querySelector("#customer-login")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#login-error"); errorElement.textContent = "";
-    try { const data = await callApi("customer-login", { phone: normalizePhone(form.get("phone")), pin: validatePin(form.get("pin")) }); localStorage.setItem(customerKey, data.sessionToken); localStorage.setItem(qrKey, data.qrToken); location.hash = "#/member/laser-tag"; }
+    try { const data = await callApi("customer-login", { phone: normalizePhone(form.get("phone")), pin: validatePin(form.get("pin")) }); saveCustomerAccess(data.sessionToken, data.qrToken); location.hash = "#/member/laser-tag"; }
     catch (error) { errorElement.textContent = localizeError(error); setFormBusy(formElement, false); }
   });
   if (route === "recover") document.querySelector("#recover-form")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#recover-error"); errorElement.textContent = "";
-    try { const pin = validatePin(form.get("pin")); if (pin !== form.get("pinConfirm")) throw new Error("PINs do not match."); const data = await callApi("recover-pin", { phone: normalizePhone(form.get("phone")), resetCode: form.get("resetCode"), newPin: pin }); localStorage.setItem(customerKey, data.sessionToken); localStorage.setItem(qrKey, data.qrToken); location.hash = "#/member/laser-tag"; }
+    try { const pin = validateNewPin(form.get("pin")); if (pin !== form.get("pinConfirm")) throw new Error("PINs do not match."); const data = await callApi("recover-pin", { phone: normalizePhone(form.get("phone")), resetCode: form.get("resetCode"), newPin: pin }); saveCustomerAccess(data.sessionToken, data.qrToken); location.hash = "#/member/laser-tag"; }
     catch (error) { errorElement.textContent = localizeError(error); setFormBusy(formElement, false); }
   });
   if (route === "owner" || route === "admin") document.querySelector("#owner-login")?.addEventListener("submit", async event => {
     event.preventDefault(); const formElement = event.currentTarget; setFormBusy(formElement, true); const form = new FormData(formElement); const errorElement = document.querySelector("#owner-error"); errorElement.textContent = "";
-    try { const token = await ownerLogin(form.get("email"), form.get("password")); await callApi("owner-check", {}, token); ownerAccessToken = token; const pending = pendingScanToken; pendingScanToken = ""; location.hash = pending ? `#/scan/${pending}` : "#/dashboard"; }
+    try { const token = await ownerLogin(form.get("email"), form.get("password")); await callApi("owner-check", {}, token); ownerAccessToken = token; touchOwnerAccess(); const pending = pendingScanToken; pendingScanToken = ""; location.hash = pending ? `#/scan/${pending}` : "#/dashboard"; }
     catch (error) { errorElement.textContent = localizeError(error); setFormBusy(formElement, false); }
   });
   if (route === "scanner") { document.querySelector("#start-scanner")?.addEventListener("click", startScanner); document.querySelector("#lookup-code")?.addEventListener("click", () => lookupCode(document.querySelector("#scan-value").value)); }
@@ -685,8 +835,15 @@ async function render() {
     path = "passport";
   }
   const [route, token] = path.split("/");
+  if (!privilegedRoutes.has(route) && (ownerAccessToken || ownerMemberSearchState.members)) clearOwnerAccess();
+  if (ownerAccessToken && Date.now() - ownerLastActivityAt >= ownerIdleLimitMs) {
+    clearOwnerAccess();
+    history.replaceState(null, "", "#/admin");
+    showToast(t("dashboard.sessionExpired"));
+    return render();
+  }
   if (route === "passport") {
-    const hasPassport = localStorage.getItem(customerKey) && localStorage.getItem(qrKey);
+    const hasPassport = credentialGet(customerKey) && credentialGet(qrKey);
     if (hasPassport) return memberView(activityMeta(localStorage.getItem(lastActivityKey)).slug, generation);
     app.innerHTML = loginView(); bindForms("login"); settleViewPosition(); return;
   }
@@ -699,7 +856,7 @@ async function render() {
     app.innerHTML = scannerView(token || ""); bindForms("scanner"); settleViewPosition(); if (token) lookupCode(token); return;
   }
   const views = { about: homeView, book: bookingView, login: loginView, owner: ownerView, admin: ownerView, scanner: scannerView, privacy: privacyView };
-  if (!views[route]) { history.replaceState(null, "", "#/passport"); app.innerHTML = loginView(); bindForms("login"); settleViewPosition(); return; }
+  if (!views[route]) { history.replaceState(null, "", "#/passport"); return render(); }
   app.innerHTML = views[route]();
   bindForms(route);
   settleViewPosition();

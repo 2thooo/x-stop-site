@@ -10,10 +10,11 @@ This checklist is part of deployment, not optional documentation. Complete it in
 - Set `SITE_ORIGIN=https://2thooo.github.io` and `SITE_BASE_PATH=/x-stop-site/loyalty` exactly.
 - Keep production CORS restricted to that exact origin. Use a separate Supabase test project for localhost development; do not point a local browser build at production.
 - Keep the built-in iframe refusal enabled. For browser-enforced anti-framing headers, move staff operations to an isolated host that can send a `Content-Security-Policy: frame-ancestors 'none'` response header.
-- Before enrolling real customers, audit every script on the shared `2thooo.github.io` origin or deploy this directory to an isolated origin. URL paths do not isolate `localStorage`, so another compromised same-origin page could read customer bearer credentials.
+- Before enrolling real customers, audit every script on the shared `2thooo.github.io` origin or deploy this directory to an isolated origin. Customer credentials are held in per-tab `sessionStorage`, but URL paths do not create a security boundary, so compromised same-origin code reached in that tab could read them.
 - Keep public Supabase Auth signup and anonymous sign-in disabled. Create separate named Auth users for admins; never share an admin account among staff.
 - Use long, unique owner passwords. If MFA is enabled, verify that the actual sign-in flow enforces it before describing the site as MFA-protected.
-- Review activity reward rules and customer-facing wording for all six activities.
+- Review activity reward rules and customer-facing wording for all eight activities.
+- Verify that the booking directory contains only X Entertainment RAK Mall and Masters Bowling, both in Ras Al Khaimah. Confirm Masters Bowling routes phone and WhatsApp bookings to `+971 54 719 0018` (`971547190018`) before publishing or printing the QR poster.
 - Have privacy, retention, data-subject-request and cross-border hosting choices reviewed for applicable UAE requirements.
 - Define who verifies a customer before the first point award or a PIN-reset code is issued.
 - Test enrollment, login, recovery, scan, cancel, point award, reward redemption, expiry, replay and concurrent confirmation.

@@ -19,6 +19,15 @@ export function validatePin(pin) {
   return String(pin);
 }
 
+export function validateNewPin(pin) {
+  const value = validatePin(pin);
+  const repeated = new Set(value).size === 1;
+  const sequential = "0123456789".includes(value) || "9876543210".includes(value);
+  const common = new Set(["121212", "112233", "123123", "654654", "000001", "999999"]);
+  if (repeated || sequential || common.has(value)) throw new Error("Choose a less predictable 6-digit PIN.");
+  return value;
+}
+
 export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"

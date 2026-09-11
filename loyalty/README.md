@@ -2,7 +2,7 @@
 
 An installable, wallet-fee-free loyalty and booking website for **X Group**. It runs from the phone home screen on iPhone, Samsung and other modern mobile devices; it is not an Apple Wallet or Samsung Wallet pass.
 
-The customer experience is one X Group Passport with six independent activity cards:
+The customer experience is one shared X Group Passport across both Ras Al Khaimah locations, with eight independent activity cards:
 
 - Laser Tag
 - Bowling
@@ -10,8 +10,10 @@ The customer experience is one X Group Passport with six independent activity ca
 - Billiard
 - PC & PlayStation
 - Others
+- VR
+- Car
 
-Each card has its own points, reward rule, last scan and short-lived QR. The staff dashboard keeps raw scans separate from confirmed point awards and shows up to 1,000 recent accepted events in Dubai time. A compact dark booking panel presents all three venues side by side with direct WhatsApp, phone and Google Maps actions. The deployed interface includes a persistent English/Arabic toggle across customer, booking, privacy, scanner and admin screens, with native right-to-left layout in Arabic.
+Each card has its own points, reward rule, last scan and short-lived QR. Activity balances belong to the member's shared passport rather than to a specific venue, so the same passport works at both RAK locations. The staff dashboard keeps raw scans separate from confirmed point awards and shows up to 1,000 recent accepted events in Dubai time. A compact dark booking panel presents both venues side by side with direct WhatsApp, phone and Google Maps actions. The deployed interface includes a persistent English/Arabic toggle across customer, booking, privacy, scanner and admin screens, with native right-to-left layout in Arabic.
 
 ## Security and product behavior
 
@@ -41,19 +43,18 @@ The bare `/loyalty/` URL redirects into the Passport route, making it the stable
 
 ## Venue booking and location routes
 
-- X Entertainment RAK Mall — Laser Tag, Bowling, Escape Room, Billiard, PC & PlayStation, Others — RAK Mall, Al Qurum, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=12180427487395956802)
-- Masters Bowling — Bowling, Billiard — Opposite Naeem Mall, Al Nakheel, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=6477996226481961738)
-- Expert Billiards — Billiard — LULU Buhairah, 1st Floor, Al Majaz 3, Sharjah — `+971 58 624 9734` — [Map](https://www.google.com/maps?cid=21444396744758821)
+- X Entertainment RAK Mall — Laser Tag, Bowling, Escape Room, Billiard, PC & PlayStation, Others, VR, Car — RAK Mall, Al Qurum, Ras Al Khaimah — `+971 54 731 0073` — [Map](https://www.google.com/maps?cid=12180427487395956802)
+- Masters Bowling — Bowling, Billiard — Opposite Naeem Mall, Al Nakheel, Ras Al Khaimah — `+971 54 719 0018` — [Map](https://www.google.com/maps?cid=6477996226481961738)
 
-The numbers, addresses, activity availability and direct map links are centralized in `config.js`. Bowling offers separate WhatsApp actions for X Entertainment and Masters Bowling; Billiard offers X Entertainment, Masters Bowling and Expert Billiards. Laser Tag is available only at X Entertainment, while Expert Billiards never appears for Bowling, Escape Room or Laser Tag. The supplied Masters Bowling WhatsApp number differs from the current Google listing, so confirm that routing number before printing permanent signage.
+The numbers, addresses, activity availability and direct map links are centralized in `config.js`. Masters Bowling uses `+971 54 719 0018` for phone calls and `971547190018` for WhatsApp. Bowling and Billiard offer separate booking actions for X Entertainment and Masters Bowling. Laser Tag, Escape Room, PC & PlayStation, Others, VR and Car are available through X Entertainment RAK Mall only. Both locations participate in the same activity passport; booking availability remains venue-specific.
 
 ## Architecture
 
 GitHub Pages hosts only the static interface. Supabase provides Auth, PostgreSQL and one Edge Function. Never put customer records, owner passwords, refresh tokens, private/secret keys or the service-role key into GitHub, `config.js`, browser storage or a public JSON file.
 
-The browser stores only the current customer's random session/QR credentials in `localStorage`. The staff access JWT is kept only in JavaScript memory and is never written to browser storage; refreshing or closing the page signs staff out. This is deliberate because the existing X Stop site shares the same GitHub Pages origin. The bundled in-app QR decoder lets iPhone staff scan without opening a new Camera-app tab in the normal flow.
+The browser keeps the current customer's random session/QR credentials in per-tab `sessionStorage`, migrates any legacy copy out of `localStorage`, and erases those credentials on sign-out. The staff access JWT is kept only in JavaScript memory and is never written to browser storage; refreshing or closing the page signs staff out. The bundled in-app QR decoder lets iPhone staff scan without opening a new Camera-app tab in the normal flow.
 
-The GitHub Pages build is fully connected to the dedicated production backend. Because browser storage is isolated by origin rather than URL path, a compromised script elsewhere on `2thooo.github.io` could still read customer credentials. Audit the existing root site before enrolling real customers, and plan an isolated custom origin such as `rewards.xgroup.ae` for stronger separation.
+The GitHub Pages build is fully connected to the dedicated production backend. `sessionStorage` limits persistence and cross-tab exposure, but it is still isolated by origin rather than URL path; a compromised same-origin page reached in the same tab could access customer credentials. Audit the existing root site before enrolling real customers, and plan an isolated custom origin such as `rewards.xgroup.ae` for stronger separation.
 
 The intended existing-repository location is:
 
@@ -110,9 +111,9 @@ supabaseUrl: "https://YOUR-PROJECT.supabase.co",
 supabaseAnonKey: "YOUR-PUBLIC-PUBLISHABLE-OR-ANON-KEY",
 ```
 
-Use the project's modern **publishable key**, never a secret key or service-role key. The remaining X Group values are already configured for the existing GitHub Pages path and RAK Mall branch.
+Use the project's modern **publishable key**, never a secret key or service-role key. The remaining X Group values are already configured for the existing GitHub Pages path and the two Ras Al Khaimah locations.
 
-The bundled X Group umbrella mark is `assets/x-group-logo.jpg`, sourced from the existing X Stop repository. The matching PWA icon and three dark venue illustrations were created with OpenAI image generation and optimized locally. Activity icons, venue artwork and PWA icons are bundled, so the installed experience does not depend on third-party image hosts. The venue images are promotional illustrations, not photographs of the physical shops.
+The bundled X Group umbrella mark is `assets/x-group-logo.jpg`, sourced from the existing X Stop repository. The matching PWA icon and two dark venue illustrations were created with OpenAI image generation and optimized locally. Activity icons, venue artwork and PWA icons are bundled, so the installed experience does not depend on third-party image hosts. The venue images are promotional illustrations, not photographs of the physical shops.
 
 Bundled Poppins and jsQR licensing/provenance is recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
@@ -134,7 +135,7 @@ After Pages updates, verify:
 
 1. The customer enters their first name, UAE phone number and a private six-digit PIN—no join code is needed.
 2. The database assigns a random, non-enumerable member code with no small numeric ceiling.
-3. The customer selects one of the six activity cards.
+3. The customer selects one of the eight activity cards.
 4. The app creates a one-use QR for that exact activity, valid for five minutes.
 5. Staff scans and verifies the member and activity, then confirms points or records no transaction. If the customer requests a reward, authenticated staff confirms the redemption and the database deducts one available reward atomically.
 6. A login from another browser rotates the long-lived QR credential and invalidates the previous credential.
@@ -209,7 +210,7 @@ When a domain such as `rewards.xgroup.ae` is ready, update all origin-dependent 
 - Supabase currently offers no UAE hosting region; obtain an explicit hosting decision before storing real customer data.
 - Browsers without native `BarcodeDetector` use the bundled, locally hosted jsQR decoder. The normal phone Camera app remains a backup, but a new tab may require the owner to sign in again.
 - The app disables all controls when embedded in an iframe. GitHub Pages cannot add a response-header `frame-ancestors` policy, so use an isolated, header-capable staff origin if stronger browser-enforced clickjacking protection is required.
-- Customer sessions last 30 days; displayed scan tokens last five minutes.
+- Customer sessions have a 24-hour absolute limit and expire after 30 minutes of inactivity; displayed scan tokens last five minutes.
 - Accepting a staff scan consumes that one-time token before the award screen. If the page closes or loses its response, the raw scan remains auditable with no points attached and the customer must refresh their activity QR.
 - The dashboard pages through 250 active members at a time and shows 1,000 recent events, while the database retains the full audit history.
 - This PWA does not appear in Apple Wallet or Samsung Wallet.

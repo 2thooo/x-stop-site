@@ -6,6 +6,10 @@ const migration = readFileSync(
   new URL("../supabase/migrations/20260905160000_bilingual_reward_text.sql", import.meta.url),
   "utf8",
 );
+const hardeningMigration = readFileSync(
+  new URL("../supabase/migrations/20260905215000_session_scan_token_hardening.sql", import.meta.url),
+  "utf8",
+);
 const edge = readFileSync(new URL("../supabase/functions/loyalty-api/index.ts", import.meta.url), "utf8");
 
 function sqlFunction(name) {
@@ -27,13 +31,16 @@ test("Arabic reward text is required, bounded and backfilled for every activity"
   }
 });
 
-test("member summary v2 returns both reward languages at the top level and in balances", () => {
+test("member summary v3 preserves both reward languages at the top level and in balances", () => {
   const member = sqlFunction("member_summary_v2");
   assert.match(member, /reward_text text, reward_text_ar text/);
   assert.match(member, /'rewardText', a\.reward_text, 'rewardTextAr', a\.reward_text_ar/);
   assert.match(member, /v_activity\.reward_text,\s*v_activity\.reward_text_ar, v_balances/);
 
-  assert.match(edge, /rpc\("member_summary_v2",/);
+  assert.match(hardeningMigration, /create or replace function public\.member_summary_v3/);
+  assert.match(hardeningMigration, /reward_text text, reward_text_ar text/);
+  assert.match(hardeningMigration, /'rewardText',a\.reward_text,'rewardTextAr',a\.reward_text_ar/);
+  assert.match(edge, /rpc\("member_summary_v3",/);
   assert.match(edge, /rewardText:row\.reward_text,rewardTextAr:row\.reward_text_ar/);
   assert.doesNotMatch(edge, /rpc\("member_summary",/);
 });
